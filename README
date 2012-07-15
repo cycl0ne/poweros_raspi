@@ -1,0 +1,52 @@
+Summary:
+========
+
+This directory contains the source code for a experimental OS called PowerOS,
+which I ported to the Raspberry PI as an educational OS. 
+It is partly inspired by the good old AmigaOS, but it is not compatible. Some
+Functions are the same others dont. So dont rely on it.
+
+Status:
+=======
+
+At the moment the exec.library (80% complete) there, but still not finished. Semaphores are missing
+and the allocmem routines dont make me happy. There is also a first version of the
+timer.device (80% complete). One of the cool functions in timer.device missing is the 
+WAITFOR_UNITHZ.
+I will try to add more and more features to the next releases. At the moment im sitting
+on USB support, SDHCI support. After that, I will try to get the old PowerDOS library to work
+with the nil: ram: and fastfiling system handlers. Perhaps console.device will be somewhere in
+between.
+Last libraries/devices which will be consequently added are:
+- intuition
+- input
+- keyboard
+- mouse
+- serial
+- graphics
+- bootmenu
+- audio
+
+Directory Hierarchy:
+====================
+
+/src
+	/raspi -> all raspi related stuff, but its mixed with exec, so in future this directory will perhaps vanish and all will go to exec.
+	/kickstart -> all "ROM" Files will be stored here
+		/lib.exec -> Exec.library, heart of the OS, with Messages, Tasks,...
+		/dev.timer -> timer.device, with this, you can ask for time, create stopwatches and get accurate time through e_time function (1.000.000hz)
+		
+System Initialization:
+----------------------
+
+The Raspberry Pi boots up a VideoCore, after that, it loads a kernel.img from SDCard and executes it on adress 0x8000. This is all accomplished in
+the platform.c in the raspi directory
+
+Thanks:
+----------------------
+- Raspberry Pi Forum, where you can find me (in the Baremetal Section)
+- Dom, for all those questions I had
+- tufty, for his LamdaPi (https://gitorious.org/lambdapi)
+- dwelch67, for his bootloader #4 (https://github.com/dwelch67/raspberrypi/)
+- Gonzo, for his ports of things to u-boot (https://github.com/gonzoua/u-boot-pi/tree/rpi)
+- all other I forgot. (i will update this part of the readme :) )
