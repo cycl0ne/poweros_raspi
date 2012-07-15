@@ -40,9 +40,11 @@ extern void *asm_memset(void* m, int c, UINT32 n);
 
 void *lib_MemSet(SysBase *SysBase, void* m, int c, UINT32 len) 
 {
-	//char *bb;
-	//for (bb = (char *)m; len--; ) *bb++ = c;
+//	DPrintF("[MemSet] Clear Memory: %x with %x len %x", m, c, len);
+//	char *bb;
+//	for (bb = (char *)m; len--; ) *bb++ = c;
 	asm_memset(m, c, len);
+	//DPrintF("[MemSet] Clear Memory: %x with %x len %x", m, c, len);
 }
 
 void DebugPutS(const INT8 *s)

@@ -2,6 +2,7 @@
 #define resident_h
 
 #include "types.h"
+#include "list.h"
 
 struct Resident
 {
