@@ -1,0 +1,32 @@
+Memory:
+Memory Manager sollte komplett überarbeitet werden.
+Was "schön" wäre, wäre eine Art von Garbage Kollektor, der allokierten Speicher zurückgibt.
+
+Zwei Ansätze:
+a) Wir bauen in AllocMem/... die Struktur um, so dass der Task gespeichert wird.
+Nachteil: Wenn Task Stirbt und andere darauf zugreifen -> Nicht gut! 
+
+b) Wir bauen in AllocMem eine Funktion ein, die eine Art von Speicherliste an
+einen Task heftet, aber auch hier könnte es zu einem BigBang kommen wenn Shared
+Speicher benutzt wird.
+
+Bsp: (Task 1 und Task 2 sharen sich Speicher als Puffer)
+Eventuell kann man "Shared Speicher" einführen?`Als Flag?
+
+Bsp für Variante 1:
+struct MemChunk
+{
+	struct Task 	*mc_Owner; 
+	struct MemChunk *mc_Next;
+	UINT32           mc_Bytes;
+};
+Neu: Es werden nun nicht nur MemChunks für Speicher geführt, der unbenutzt ist,
+sondern auch nun für "benutzten Speicher".
+Bei unbenutzten Speicher ist der mc_Owner = NULL.
+
+APTR lib_Allocate(SysBase *SysBase, struct MemHeader *mh, UINT32 nbytes)
+{
+
+}
+
+
