@@ -132,36 +132,28 @@ void lib_Deallocate(SysBase *SysBase,struct MemHeader *mh, APTR memoryBlock)
 //	Permit();
 }
 
-#if 0
-static void test_mask(size_t align)
-{
-    uintptr_t mask = ~(uintptr_t)(align - 1);
-    void *mem = malloc(1024+align-1);
-    void *ptr = (void *)(((uintptr_t)mem+align-1) & mask);
-    assert((align & (align - 1)) == 0);
-    printf("0x%08" PRIXPTR ", 0x%08" PRIXPTR "\n", mem, ptr);
-    memset_16aligned(ptr, 0, 1024);
-    free(mem);
-}
-#endif
-
 APTR lib_AllocVec(SysBase *SysBase, UINT32 byteSize, UINT32 requirements)
 {
     UINT8 *ret = NULL;
     struct MemHeader *mh=(struct MemHeader *)SysBase->MemList.lh_Head;
+	Forbid();
 	while(mh->mh_Node.ln_Succ!=NULL)
 	{
 		if (mh->mh_Free >= byteSize)
 		{
-			Forbid();
 			ret = Allocate(mh, byteSize);
+			if(requirements&MEMF_CLEAR) 
+			{
+				//DPrintF("[AllocVec]Clearing Memory %x, %x\n", ret, byteSize);
+				MemSet(ret, '\0', byteSize);
+				//DPrintF("[AllocVec]Cleared\n");				
+			}
 			Permit();
+			return ret;
 		}
 		mh=(struct MemHeader *)mh->mh_Node.ln_Succ;
-	}
-	if (ret == NULL) return ret;
-	
-   	if(requirements&MEMF_CLEAR) MemSet(ret, '\0', byteSize);
+	}	
+	Permit();
 	return ret;
 }
 
@@ -177,6 +169,7 @@ void lib_FreeVec(SysBase *SysBase, APTR memoryBlock)
 			Forbid();
 			Deallocate(mh, memoryBlock);
 			Permit();
+			return;
 		}
 		mh=(struct MemHeader *)mh->mh_Node.ln_Succ;
 	}

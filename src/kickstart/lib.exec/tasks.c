@@ -38,16 +38,16 @@ static void TaskRun(void)
 	interrupts_enable();
 	f(arg);
 	
-	lib_Print_uart0("Left Main\n");
+	//DPrintF("Left Main\n");
 	itsme->State = REMOVED;
 	Schedule();
 	for(;;); //Not reached
 }
 
 
-Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize)
+Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri)
 {
-	Task *newTask = AllocVec(sizeof(Task), 0);
+	Task *newTask = AllocVec(sizeof(Task), MEMF_FAST|MEMF_CLEAR);
 	if (newTask==NULL) return NULL;
 //	UINT32 mask = ~(7);
 //	void *mem = AllocVec(stackSize * sizeof(UINT32) + 7, MEMF_FAST|MEMF_CLEAR);
@@ -72,6 +72,7 @@ Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32
 	newTask->Node.ln_Type = NT_TASK;
 	if (name == NULL) 	newTask->Node.ln_Name = "UnknownTask";
 	else newTask->Node.ln_Name = name;
+	newTask->Node.ln_Pri = pri;
 	newTask->State = READY;
 	newTask->CPU_Usage = 0;
 	newTask->TDNestCnt = -1; // TaskSched allowed

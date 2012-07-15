@@ -34,6 +34,8 @@ APTR sdhci_FuncTab[] =
  (APTR) ((UINT32)-1)
 };
 
+INT32 board_mmc_init();
+
 struct SDHCIBase *sdhci_InitDev(struct SDHCIBase *SDHCIBase, UINT32 *segList, struct SysBase *SysBase)
 {
 	SDHCIBase->Device.dd_Library.lib_OpenCnt = 0;
@@ -54,7 +56,8 @@ struct SDHCIBase *sdhci_InitDev(struct SDHCIBase *SDHCIBase, UINT32 *segList, st
 	
 //	SDHCIBase->SDHCI_IntServer = CreateIntServer(DevName, SDHCI_INT_PRI, SDHCI_IRQServer, SDHCIBase);
 //	AddIntServer(SDHCI_INT_NR, SDHCIBase->SDHCI_IntServer);
-	
+
+	board_mmc_init();
 	return SDHCIBase;
 }
 

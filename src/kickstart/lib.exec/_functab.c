@@ -1,6 +1,9 @@
 #include "exec_proto_lib.h"
 #include "exec_funcs.h"
 
+#define _IDLE_TASK_STACK_ 4096
+#define _EXEC_TASK_STACK_ 4096*4
+
 APTR FuncTab[] =
 {
 	(void(*)) lib_OpenLib,
@@ -101,13 +104,23 @@ static void IntMakeFunctions(APTR target, APTR functionArray);
 void lib_hexstrings ( unsigned int d );
 void lib_Print_uart0(const char *s);
 void _InitExcServer(SysBase *SysBase);
-//#define FUNCTAB_DEBUG
+#define FUNCTAB_DEBUG
 #ifdef FUNCTAB_DEBUG
 	#define DEBUG(fmt, args...) DPrintF("[%s:%d] " fmt, __PRETTY_FUNCTION__, __LINE__ , ##args)
 #else
 	#define DEBUG(fmt, args...) do {} while(0)
 #endif
 
+static void lib_Idle(APTR SysBase) 
+{
+	//SysBase *SysBase = g_SysBase;
+	DPrintF("[IDLE] Started\n");
+	SetTaskPri(NULL, -125);
+	for(;;);
+}
+
+Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);
+void lib_ExecTask(struct SysBase *SysBase);
 
 SysBase *CreateSysBase(struct MemHeader *memStart)
 {
@@ -124,18 +137,19 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
 		lib_Print_uart0("ERROR, No Memory for SysBase");
 		for(;;);
 	}
+	// Create the Data field below Jumptable
+	SysBase = (struct SysBase *)((UINT32)SysBase + negsize);
+
 //	lib_Print_uart0("SysBase:");
 //	lib_hexstrings((UINT32) SysBase);
 //	lib_hexstrings((UINT32) sizeof(struct SysBase));
-	
-	SysBase = (APTR)((UINT32)SysBase - sizeof(struct SysBase));
 
 	IntMakeFunctions(SysBase, &FuncTab);
-//	UINT32 tmp = ((UINT32 *)SysBase)[-1];
-//	lib_hexstrings((UINT32) tmp);
-//	lib_hexstrings((UINT32) ((UINT32 *)SysBase)[-2]);
-//	lib_hexstrings((UINT32) lib_OpenLib);
-//	lib_hexstrings((UINT32) lib_CloseLib);
+	UINT32 tmp = ((UINT32 *)SysBase)[-1];
+	lib_hexstrings((UINT32) tmp);
+	lib_hexstrings((UINT32) ((UINT32 *)SysBase)[-2]);
+	lib_hexstrings((UINT32) lib_OpenLib);
+	lib_hexstrings((UINT32) lib_CloseLib);
 
 	// FROM NOW ON YOU CAN USE JUMPTABLE
 	SysBase->IDNestCnt = 1;
@@ -172,7 +186,7 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
 
 	DEBUG("AlocCPU Stack\n");
 	
-	SysBase->CPU_Stack = AllocVec(_CPUSTACK_,MEMF_FAST);//|MEMF_CLEAR);
+	SysBase->CPU_Stack = AllocVec(_CPUSTACK_,MEMF_FAST|MEMF_CLEAR);
 
 	DEBUG("Init EXCeptions Vector\n");
 	_InitExcServer(SysBase);
@@ -181,6 +195,32 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
     // Enqueue our new build Library to our Library Manager.
    	Enqueue(&SysBase->LibList, &SysBase->LibNode.lib_Node);
 	DEBUG("Done, return SysBase: %x\n", SysBase);
+
+	DPrintF("[INIT] Create Idle Task\n");
+	Task *task1 = TaskCreate(SysBase, "idle", lib_Idle, SysBase, _IDLE_TASK_STACK_, 128); 
+	Task *task2 = TaskCreate(SysBase, "ExecTask", lib_ExecTask, SysBase, _EXEC_TASK_STACK_, 100);
+
+	if (RomTagScanner((APTR)0x8000, (APTR)0x180000) == FALSE)
+	{
+		DPrintF("[INIT] ROMTAG Scanner Failed\n");
+		for(;;);
+	}
+
+	struct ResidentNode *res;
+	DPrintF("[INIT] RTF_SINGLETASK\n");
+    ForeachNode(&SysBase->ResidentList, res)
+    {
+        if (res->rn_Resident->rt_Flags & RTF_SINGLETASK) 
+        {
+            DPrintF("(SINGLETASK)InitResident %s (%x)\n", res->rn_Resident->rt_Name,res->rn_Resident);    
+            if (InitResident(res->rn_Resident, NULL)== NULL) 
+            {
+				DPrintF("[INIT] ROMTAG Scanner Failed (SingleTask)\n");
+				DPrintF("on Resident [%x] name: %s\n", res->rn_Resident, res->rn_Resident->rt_Name);
+				for(;;);
+            }
+        }
+    }
 	return SysBase;
 }
 

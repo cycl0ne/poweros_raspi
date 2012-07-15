@@ -40,12 +40,20 @@ static void MakeTaskRun(SysBase *SysBase, Task *Task)
 		Task->State = RUN;
 		SysBase->TDNestCnt = Task->TDNestCnt;
 		if (Task->Launch) Task->Launch(SysBase);
-	}	
+	} else
+	{
+		DPrintF("PANIC: No Task Ready, where is IDLE?");
+		for(;;);
+	}
 }
 
 static void MakeTaskDestroy(SysBase *SysBase, Task *Task)
 {
 	// Here do some Garbage Collection
+	// Task schould be in no list, so just delete all infos of him
+	FreeVec(Task->Stack); // was allocated through us
+	FreeVec(Task); // this too
+	// Finshed
 }
 extern APTR supervisor_sp;
 
@@ -59,9 +67,9 @@ void before_thread_runs_arch(Task *Task)
 
 void lib_Dispatch(void)
 {
-//	lib_Print_uart0("[DISPATCH]\n");
 	SysBase *SysBase = g_SysBase;
 	Task *Task = SysBase->thisTask;
+//	DPrintF("[DISPATCH] %s (%x)\n", Task->Node.ln_Name, Task->State);
 
 	if (Task) {
 		switch(Task->State) {

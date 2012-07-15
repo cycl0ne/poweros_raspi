@@ -30,19 +30,6 @@ void debug_int(void)
 	lib_hexstrings(READ32(ARM_IRQ_PEND2));
 	lib_hexstrings(READ32(ARM_IRQ_PEND3));
 }
-void sys_sleep(APTR data) 
-{
-	SysBase *SysBase = g_SysBase;
-//	SetTaskPri(null, -126);
-//	lib_Print_uart0("[IDLE] Started\n");
-//	lib_hexstrings((UINT32)lib_Permit);
-//	lib_hexstrings((UINT32)((UINT32*)SysBase)[-5]);
-	
-	SetTaskPri(NULL, -125);
-	
-	for(;;);
-	//lib_Print_uart0("[IDLE2] Ended\n");	
-}
 
 void USB_ShowTree();
 void USB_Inf();
@@ -50,7 +37,7 @@ int usb_init(void);
 
 #include "timer.h"
 
-void sys_sleep2() 
+void sys_demo() 
 {
 	lib_Print_uart0("[DEMO] Started\n");	
 	//	debug_int();
@@ -93,12 +80,14 @@ void sys_sleep2()
 		TimerIO->tr_time.tv_secs = 5;
 		TimerIO->tr_time.tv_micro = 0;
 		DoIO((struct IORequest *)TimerIO);
+		DPrintF("5Sec Timeout\n");
 		//		for (int i = 0; i < 0x100000; i++) NOP;
 		WRITE32(GPSET0, 1<<16);
 		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
 		TimerIO->tr_time.tv_secs = 5;
 		TimerIO->tr_time.tv_micro = 0;
 		DoIO((struct IORequest *)TimerIO);		
+		DPrintF("5Sec Timeout\n");
 //		for (int i = 0; i < 0x100000; i++) NOP;
 //		debug_int();
 
@@ -134,14 +123,12 @@ struct MemHeader * INTERN_AddMemList(UINT32 size, UINT32 attribute, INT32 pri, A
 	return mem;
 }
 
-Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize);
+Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);
 
 void install_exception_handlers(void);
 void exception_init(void);
 void install_exception_handlers(void);
 SysBase *CreateSysBase(struct MemHeader *memStart);
-
-#define _IDLE_TASK_STACK_ 4096
 
 #include "atag.h"
 
@@ -233,69 +220,17 @@ void ExecInit(void) {
 	
 	DPrintF("[INIT] ATAG Scanner\n");
 	ATAG_Scanner(g_SysBase);
-
-	DPrintF("[INIT] Create Idle Task\n");
-	Task *idle1 = TaskCreate(SysBase, "idle", sys_sleep, NULL, _IDLE_TASK_STACK_);
-	Task *idle2 = TaskCreate(SysBase, "idle2", sys_sleep2, NULL, _IDLE_TASK_STACK_);
-
-	if (RomTagScanner((APTR)0x8000, (APTR)0x180000) == FALSE)
-	{
-		DPrintF("[INIT] ROMTAG Scanner Failed\n");
-		for(;;);
-	}
-
-	struct ResidentNode *res;
-	lib_Print_uart0("[INIT] RTF_SINGLETASK\n");
-    ForeachNode(&SysBase->ResidentList, res)
-    {
-        if (res->rn_Resident->rt_Flags & RTF_SINGLETASK) 
-        {
-			//lib_Print_uart0(res->rn_Resident->rt_Name);
-			//lib_Print_uart0("(ST)\n");
-            DPrintF("(SINGLETASK)InitResident %s (%x)\n", res->rn_Resident->rt_Name,res->rn_Resident);    
-            if (InitResident(res->rn_Resident, NULL)== NULL) 
-            {
-				DPrintF("[INIT] ROMTAG Scanner Failed (SingleTask)\n");
-				for(;;);
-            }
-        }
-    }
-	
-	DPrintF("[INIT] RTF_COLDSTART\n");
-    ForeachNode(&SysBase->ResidentList, res)
-    {
-        if (res->rn_Resident->rt_Flags & RTF_COLDSTART) 
-        {
-			//lib_Print_uart0(res->rn_Resident->rt_Name);
-			//lib_Print_uart0("(CS)\n");
-			DPrintF("(COLDSTART)InitResident %s (%x)\n", res->rn_Resident->rt_Name,res->rn_Resident);    
-            if (InitResident(res->rn_Resident, NULL)== NULL) 
-            {
-				DPrintF("[INIT] ROMTAG Scanner Failed (ColdStart)\n");
-				for(;;);
-            }
-        }
-    }	
 	
 	Platform_InitTimer();
 
-	DPrintF("[INIT] Activating SysBase Permit/Enable\n");
+	DPrintF("[INIT] Activating SysBase Permit/Enable -> Leaving SingleTask\n");
 	
 	SysBase->TDNestCnt = -1;
 	SysBase->IDNestCnt = -1;
 
-	DPrintF("[INIT] RTF_AFTERDOS\n");
-    ForeachNode(&SysBase->ResidentList, res)
-    {
-        if (res->rn_Resident->rt_Flags & RTF_AFTERDOS) 
-        {
-            DPrintF("(AFTERDOS)InitResident %s (%x)\n", res->rn_Resident->rt_Name,res->rn_Resident);    
-            InitResident(res->rn_Resident, NULL);
-        }
-    }
+	Task *idle2 = TaskCreate(SysBase, "demo", sys_demo, SysBase, 4096*2 , 0);
 
-	
-	DPrintF("[INIT] Schedule\n");
+	DPrintF("[INIT] Schedule -> leaving Kernel Init\n");
 	Schedule();
 	DPrintF("[INIT] PONR (point of no return\n");
 }
