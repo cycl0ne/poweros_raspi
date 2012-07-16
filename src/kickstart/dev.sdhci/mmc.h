@@ -226,7 +226,10 @@ struct mmc_data {
 	UINT32 blocksize;
 };
 
+#include "list.h"
+
 struct mmc {
+	Node node;
 	char name[32];
 	void *priv;
 	UINT32 voltages;
@@ -261,13 +264,13 @@ struct mmc {
 };
 
 INT32 mmc_register(struct mmc *mmc);
-INT32 mmc_initialize(bd_t *bis);
+INT32 mmc_initialize(void *);
 INT32 mmc_init(struct mmc *mmc);
 INT32 mmc_read(struct mmc *mmc, UINT64 src, UINT8 *dst, INT32 size);
 void mmc_set_clock(struct mmc *mmc, UINT32 clock);
 struct mmc *find_mmc_device(INT32 dev_num);
 INT32 mmc_set_dev(INT32 dev_num);
-void print_mmc_devices(char separator);
+void print_mmc_devices(void *, char separator);
 INT32 get_mmc_num(void);
 INT32 board_mmc_getcd(struct mmc *mmc);
 INT32 mmc_switch_part(INT32 dev_num, UINT32 part_num);

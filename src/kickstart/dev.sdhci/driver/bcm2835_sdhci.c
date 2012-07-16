@@ -5,14 +5,15 @@
 
 #include "sdhci_intern.h"
 #include "raspi_platform.h"
+void lib_DSB(void) ;
 
-#define writel(a,b) WRITE32(b,a)
-#define writew(a,b) WRITE16(b,a)
-#define writeb(a,b) WRITE8(b,a)
+#define writel(a,b) ({lib_DSB(); WRITE32(b,a);})
+#define writew(a,b) ({lib_DSB(); WRITE16(b,a);})
+#define writeb(a,b) ({lib_DSB(); WRITE8(b,a);})
 
-#define readl(a) READ32(a)
-#define readw(a) READ16(a)
-#define readb(a) READ8(a)
+#define readl(a) ({UINT32 __v=READ32(a); lib_DSB();__v;})
+#define readw(a) ({UINT16 __v=READ16(a); lib_DSB();__v;})
+#define readb(a) ({UINT8 __v=READ8(a); lib_DSB();__v;})
 
 #include "mmc.h"
 #include "sdhci.h"
@@ -172,6 +173,8 @@ INT32 bcm2835_sdh_init(UINT32 regbase)
 		return 1;
 	}
 
+	printf("malloc host: %x\n", host);
+	
 	host->name = BCMSDH_NAME;
 	host->ioaddr = (void *)regbase;
 	host->quirks = SDHCI_QUIRK_BROKEN_VOLTAGE | SDHCI_QUIRK_BROKEN_R1B;
@@ -193,6 +196,7 @@ INT32 bcm2835_sdh_init(UINT32 regbase)
 	twoticks_delay = (twoticks_delay + 1000 - 1) / 1000;
 
 	host->version = sdhci_readw(host, SDHCI_HOST_VERSION) & 0xff;
+	printf("version: %d\n", host->version);
 	add_sdhci(host, MIN_FREQ, 0);
 
 	return 0;

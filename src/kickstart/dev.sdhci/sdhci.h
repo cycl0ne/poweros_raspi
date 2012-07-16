@@ -254,9 +254,13 @@ struct sdhci_host {
 static inline void sdhci_writel(struct sdhci_host *host, UINT32 val, int reg)
 {
 	if (host->ops->write_l)
+	{
 		host->ops->write_l(host, val, reg);
+	}
 	else
+	{
 		writel(val, host->ioaddr + reg);
+	}
 }
 
 static inline void sdhci_writew(struct sdhci_host *host, UINT16 val, int reg)

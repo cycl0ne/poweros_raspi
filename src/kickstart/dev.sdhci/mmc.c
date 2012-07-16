@@ -3,14 +3,15 @@
 #include "align.h"
 
 #include <block_device.h>
+void lib_DSB(void) ;
 
-#define writel(a,b) WRITE32(b,a)
-#define writew(a,b) WRITE16(b,a)
-#define writeb(a,b) WRITE8(b,a)
+#define writel(a,b) ({lib_DSB(); WRITE32(b,a);})
+#define writew(a,b) ({lib_DSB(); WRITE16(b,a);})
+#define writeb(a,b) ({lib_DSB(); WRITE8(b,a);})
 
-#define readl(a) READ32(a)
-#define readw(a) READ16(a)
-#define readb(a) READ8(a)
+#define readl(a) ({UINT32 __v=READ32(a); lib_DSB();__v;})
+#define readw(a) ({UINT16 __v=READ16(a); lib_DSB();__v;})
+#define readb(a) ({UINT8 __v=READ8(a); lib_DSB();__v;})
 
 /* Set block count limit because of 16 bit register limit on some hardware*/
 #ifndef CONFIG_SYS_MMC_MAX_BLK_COUNT
@@ -52,6 +53,10 @@ static inline UINT64 lldiv(UINT64 dividend, UINT32 divisor)
 	return(__res);
 }
 
+#include "list.h"
+#include "exec_funcs.h"
+
+struct List mmc_devices;
 //static struct list_head mmc_devices;
 static int cur_dev_num = -1;
 
@@ -276,6 +281,11 @@ int mmc_set_blocklen(struct mmc *mmc, int len)
 struct mmc *find_mmc_device(int dev_num)
 {
 	struct mmc *m;
+	ForeachNode(&mmc_devices, m)
+	{
+		printf("m->block_dev.dev: %x", m);
+		if (m->block_dev.dev == dev_num) return m;
+	}
 /*	struct list_head *entry;
 
 	list_for_each(entry, &mmc_devices) {
@@ -1297,6 +1307,9 @@ int mmc_send_if_cond(struct mmc *mmc)
 	return 0;
 }
 
+extern APTR g_SysBase;
+#undef SysBase
+
 int mmc_register(struct mmc *mmc)
 {
 	/* Setup the universal parts of the block interface just once */
@@ -1306,8 +1319,11 @@ int mmc_register(struct mmc *mmc)
 	mmc->block_dev.block_read = mmc_bread;
 	mmc->block_dev.block_write = mmc_bwrite;
 	mmc->block_dev.block_erase = mmc_berase;
-	if (!mmc->b_max)
-		mmc->b_max = CONFIG_SYS_MMC_MAX_BLK_COUNT;
+	if (!mmc->b_max) mmc->b_max = CONFIG_SYS_MMC_MAX_BLK_COUNT;
+
+	void * SysBase = g_SysBase;
+	AddHead(&mmc_devices, (struct Node *)mmc);
+	printf("Adding MMC to List\n");
 /*
 	INIT_LIST_HEAD (&mmc->link);
 	list_add_tail (&mmc->link, &mmc_devices);
@@ -1328,28 +1344,31 @@ int mmc_init(struct mmc *mmc)
 {
 	int err;
 
-	if (mmc_getcd(mmc) == 0) {
+	if (mmc_getcd(mmc) == 0) 
+	{
 		mmc->has_init = 0;
 		printf("MMC: no card present\n");
 		return NO_CARD_ERR;
 	}
 
-	if (mmc->has_init)
-		return 0;
+	if (mmc->has_init) return 0;
 
+//	printf("Call Init\n");
 	err = mmc->init(mmc);
 
-	if (err)
-		return err;
+	if (err) return err;
 
+//	printf("Set Bus\n");
 	mmc_set_bus_width(mmc, 1);
+
+//	printf("Set Clock\n");
 	mmc_set_clock(mmc, 1);
 
+//	printf("Reset Card\n");
 	/* Reset the Card */
 	err = mmc_go_idle(mmc);
 
-	if (err)
-		return err;
+	if (err) return err;
 
 	/* The internal partition reset to user partition(0) at every CMD0*/
 	mmc->part_num = 0;
@@ -1389,10 +1408,17 @@ static int __def_mmc_init(bd_t *bis)
 
 int cpu_mmc_init(bd_t *bis) __attribute__((weak, alias("__def_mmc_init")));
 int board_mmc_init(bd_t *bis) __attribute__((weak, alias("__def_mmc_init")));
+#undef SysBase
 
-void print_mmc_devices(char separator)
+void print_mmc_devices(APTR SysBase, char separator)
 {
 	struct mmc *m;
+	
+	ForeachNode(&mmc_devices, m)
+	{
+		printf("%s: %d", m->name, m->block_dev.dev);
+		printf("%c ", separator);
+	}
 /*	struct list_head *entry;
 
 	list_for_each(entry, &mmc_devices) {
@@ -1412,15 +1438,17 @@ int get_mmc_num(void)
 	return cur_dev_num;
 }
 
-int mmc_initialize(bd_t *bis)
+int mmc_initialize(APTR SysBase)
 {
+	bd_t *bis = NULL;
+	NewListType(&mmc_devices, NT_RESOURCE);
 //	INIT_LIST_HEAD (&mmc_devices);
 	cur_dev_num = 0;
 
 	if (board_mmc_init(bis) < 0)
 		cpu_mmc_init(bis);
 
-	print_mmc_devices(',');
+	print_mmc_devices(SysBase, ',');
 
 	return 0;
 }

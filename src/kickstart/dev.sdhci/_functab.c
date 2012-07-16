@@ -35,6 +35,62 @@ APTR sdhci_FuncTab[] =
 };
 
 INT32 board_mmc_init();
+#include "mmc.h"
+
+static void print_mmcinfo(struct mmc *mmc)
+{
+	printf("Device: %s\n", mmc->name);
+	printf("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
+	printf("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
+	printf("Name: %c%c%c%c%c \n", mmc->cid[0] & 0xff,
+			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
+			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
+
+	printf("Tran Speed: %d\n", mmc->tran_speed);
+	printf("Rd Block Len: %d\n", mmc->read_bl_len);
+
+	printf("%s version %d.%d\n", IS_SD(mmc) ? "SD" : "MMC",
+			(mmc->version >> 4) & 0xf, mmc->version & 0xf);
+
+	printf("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
+	printf("Capacity: ");
+	UINT64 tmp = mmc->capacity;
+	tmp = tmp >>20;
+	printf("%d GiB\n", tmp);
+
+	printf("Bus Width: %d-bit\n", mmc->bus_width);
+}
+
+static int curr_device = -1;
+
+int do_mmcinfo () //cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	struct mmc *mmc;
+
+	if (curr_device < 0) {
+		if (get_mmc_num() > 0)
+			curr_device = 0;
+		else {
+			printf("No MMC device available\n");
+			return 1;
+		}
+	}
+	mmc = find_mmc_device(curr_device);
+	if (mmc) {
+		mmc_init(mmc);
+
+		printf("print Infos:\n");
+
+		print_mmcinfo(mmc);
+		return 0;
+	} else {
+		printf("no mmc device at slot %x\n", curr_device);
+		return 1;
+	}
+}
+
+
+int mmc_initialize(void *SysBase);
 
 struct SDHCIBase *sdhci_InitDev(struct SDHCIBase *SDHCIBase, UINT32 *segList, struct SysBase *SysBase)
 {
@@ -57,7 +113,8 @@ struct SDHCIBase *sdhci_InitDev(struct SDHCIBase *SDHCIBase, UINT32 *segList, st
 //	SDHCIBase->SDHCI_IntServer = CreateIntServer(DevName, SDHCI_INT_PRI, SDHCI_IRQServer, SDHCIBase);
 //	AddIntServer(SDHCI_INT_NR, SDHCIBase->SDHCI_IntServer);
 
-	board_mmc_init();
+	mmc_initialize(SysBase);
+	do_mmcinfo();
 	return SDHCIBase;
 }
 

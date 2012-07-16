@@ -28,13 +28,15 @@
  
 #include <mmc.h>
 
-#define writel(a,b) WRITE32(b,a)
-#define writew(a,b) WRITE16(b,a)
-#define writeb(a,b) WRITE8(b,a)
+void lib_DSB(void) ;
 
-#define readl(a) READ32(a)
-#define readw(a) READ16(a)
-#define readb(a) READ8(a)
+#define writel(a,b) ({lib_DSB(); WRITE32(b,a);})
+#define writew(a,b) ({lib_DSB(); WRITE16(b,a);})
+#define writeb(a,b) ({lib_DSB(); WRITE8(b,a);})
+
+#define readl(a) ({UINT32 __v=READ32(a); lib_DSB();__v;})
+#define readw(a) ({UINT16 __v=READ16(a); lib_DSB();__v;})
+#define readb(a) ({UINT8 __v=READ8(a); lib_DSB();__v;})
 
 static inline int fls(int x)
 {
@@ -86,6 +88,7 @@ static void sdhci_reset(struct sdhci_host *host, UINT8 mask)
 		timeout--;
 		udelay(1000);
 	}
+	printf("SDHCI_Reset\n");
 }
 
 static void sdhci_cmd_done(struct sdhci_host *host, struct mmc_cmd *cmd)
@@ -411,6 +414,7 @@ void sdhci_set_ios(struct mmc *mmc)
 
 int sdhci_init(struct mmc *mmc)
 {
+	printf("sdhci_init\n");
 	struct sdhci_host *host = (struct sdhci_host *)mmc->priv;
 
 	if ((host->quirks & SDHCI_QUIRK_32BIT_DMA_ADDR) && !aligned_buffer) {
@@ -421,9 +425,13 @@ int sdhci_init(struct mmc *mmc)
 		}
 	}
 
+	printf("sdhci_writel %x\n", host);
+
 	/* Eable all state */
 	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_ENABLE);
 	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_SIGNAL_ENABLE);
+
+	printf("sdhci_setpower\n");
 
 	sdhci_set_power(host, fls(mmc->voltages) - 1);
 
@@ -440,11 +448,11 @@ int add_sdhci(struct sdhci_host *host, UINT32 max_clk, UINT32 min_clk)
 		printf("mmc malloc fail!\n");
 		return -1;
 	}
-
 	mmc->priv = host;
 	host->mmc = mmc;
-
-	sprintf(mmc->name, "%s", host->name);
+//FIXME !!!
+	//memcpy(mmc->name, host->name, 40);
+	//sprintf(mmc->name, "%s", host->name);
 	mmc->send_cmd = sdhci_send_command;
 	mmc->set_ios = sdhci_set_ios;
 	mmc->init = sdhci_init;
