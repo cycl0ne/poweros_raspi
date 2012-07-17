@@ -20,7 +20,7 @@ ASFLAGS_FOR_TARGET = -mcpu=arm1176jzf-s
 LDFLAGS = -static -nostdlib  --error-unresolved-symbols 
 
 
-MODULES := raspi kickstart/lib.exec kickstart/dev.timer kickstart/lib.usb/driver kickstart/lib.usb kickstart/dev.sdhci kickstart/dev.sdhci/driver
+MODULES := raspi kickstart/lib.exec kickstart/dev.timer kickstart/dev.test
 SRC_DIR := $(addprefix src/,$(MODULES))
 INC_DIR := $(addsuffix /include,$(SRC_DIR))
 BUILD_DIR := $(addsuffix /build,$(SRC_DIR))
