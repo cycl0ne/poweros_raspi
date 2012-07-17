@@ -8,9 +8,7 @@
 
 #undef SysBase
 
-
-
-
+#include "mmc.h"
 #include "block_device.h"
 
 #define VERSION  0
@@ -18,13 +16,6 @@
 
 #undef DEVNAME
 #define DEVNAME "sdhci"
-
-struct IOExtTD
-{
-    struct IOStdReq iotd_Req;
-    UINT32           iotd_Count;
-    UINT32           iotd_SecLabel;
-};
 
 #define TD_MOTOR        (CMD_NONSTD + 0)
 #define TD_SEEK         (CMD_NONSTD + 1)
@@ -103,13 +94,33 @@ typedef struct SDHCIFlags {
 	} bits;
 }SDHCIFlags;
 
+#define SDHCIF_Shutdown 	(1<<16)
+
 #define SDHCI_SIGNAL_DEVDONE	8;
 #define SDHCI_SIGNAL_PORT		9;
 #define SDHCI_SIGNAL_WAITTIMER	10;
 #define SDHCI_SIGNAL_DSKBLK		11;
-/*
+
+struct IOExtTD
+{
+    struct IOStdReq iotd_Req;
+    UINT32           iotd_Count;
+    UINT32           iotd_SecLabel;
+};
+
+#define UNITF_BUSY		(1<<2)
+//#define SDHCIUnitF_Read (1<<2)
+
 typedef struct SDHCIUnit
 {
+	struct Unit Unit;
+	UINT32	Flags;
+	UINT32	Counter;
+	UINT8	ProtStatus;
+	struct List	ChangeListener;
+	struct mmc	*MMC;
+}SDHCIUnit;
+/*
 	UINT32	Flags;
 	UINT32	DeviceType;
 	UINT32	NumberOfTracks;
@@ -150,13 +161,16 @@ typedef struct SDHCIBase
 	struct Device		Device;
 	UINT32				Flags;
 	APTR				SysBase;
-	//struct SDHCIUnit	Units; // Support only one Unit
+	struct SDHCIUnit	Units; // Support only one Unit
 	
 	struct Task			*SDHCITask;
+    struct MsgPort      *UnitPort;
+    struct MsgPort      *TimerPort;
+
 	APTR				Timer0_Dev;
-    struct TimeRequest  Timer0_Unit;
+    struct TimeRequest  *Timer0_Unit;
 	APTR				Timer1_Dev;
-    struct TimeRequest  Timer1_Unit;
+    struct TimeRequest  *Timer1_Unit;
 
 	UINT32				DMAIRQ;
 	struct Interrupt	*SDHCI_IntServer;
@@ -174,6 +188,8 @@ void mdelay(UINT32 delay);
 int memcmp(const void *s1, const void *s2, size_t n);
 void sprintf(char *buf, const char *fmt, ...);
 #define bd_t UINT32
+
+BOOL sdhci_PerformIO(struct SDHCIBase *SDHCIBase, struct IOExtTD *ioreq);
 
 #define SysBase SDHCIBase->SysBase
 

@@ -5,13 +5,19 @@
 #include <block_device.h>
 void lib_DSB(void) ;
 
-#define writel(a,b) ({lib_DSB(); WRITE32(b,a);})
-#define writew(a,b) ({lib_DSB(); WRITE16(b,a);})
-#define writeb(a,b) ({lib_DSB(); WRITE8(b,a);})
+#define writel(a,b) WRITE32(b,a)
+#define writew(a,b) WRITE16(b,a)
+#define writeb(a,b) WRITE8(b,a)
+//#define writel(a,b) ({lib_DSB(); WRITE32(b,a);})
+//#define writew(a,b) ({lib_DSB(); WRITE16(b,a);})
+//#define writeb(a,b) ({lib_DSB(); WRITE8(b,a);})
 
-#define readl(a) ({UINT32 __v=READ32(a); lib_DSB();__v;})
-#define readw(a) ({UINT16 __v=READ16(a); lib_DSB();__v;})
-#define readb(a) ({UINT8 __v=READ8(a); lib_DSB();__v;})
+//#define readl(a) ({UINT32 __v=READ32(a); lib_DSB();__v;})
+//#define readw(a) ({UINT16 __v=READ16(a); lib_DSB();__v;})
+//#define readb(a) ({UINT8 __v=READ8(a); lib_DSB();__v;})
+#define readl(a)	READ32(a)
+#define readw(a)	READ16(a)
+#define readb(a)	READ8(a)
 
 /* Set block count limit because of 16 bit register limit on some hardware*/
 #ifndef CONFIG_SYS_MMC_MAX_BLK_COUNT
@@ -283,7 +289,7 @@ struct mmc *find_mmc_device(int dev_num)
 	struct mmc *m;
 	ForeachNode(&mmc_devices, m)
 	{
-		printf("m->block_dev.dev: %x", m);
+		//printf("m->block_dev.dev: %x\n", m);
 		if (m->block_dev.dev == dev_num) return m;
 	}
 /*	struct list_head *entry;
@@ -515,18 +521,15 @@ static UINT32 mmc_bread(INT32 dev_num, UINT32 start, lbaint_t blkcnt, void *dst)
 		return 0;
 
 	if ((start + blkcnt) > mmc->block_dev.lba) {
-		printf("MMC: block number 0x%lx exceeds max(0x%lx)\n",
-			start + blkcnt, mmc->block_dev.lba);
+		printf("MMC: block number 0x%lx exceeds max(0x%lx)\n", start + blkcnt, mmc->block_dev.lba);
 		return 0;
 	}
 
-	if (mmc_set_blocklen(mmc, mmc->read_bl_len))
-		return 0;
+	if (mmc_set_blocklen(mmc, mmc->read_bl_len)) return 0;
 
 	do {
 		cur = (blocks_todo > mmc->b_max) ?  mmc->b_max : blocks_todo;
-		if(mmc_read_blocks(mmc, dst, start, cur) != cur)
-			return 0;
+		if(mmc_read_blocks(mmc, dst, start, cur) != cur) return 0;
 		blocks_todo -= cur;
 		start += cur;
 		dst += cur * mmc->read_bl_len;
@@ -826,7 +829,7 @@ int sd_switch(struct mmc *mmc, int mode, int group, UINT8 value, UINT8 *resp)
 	data.blocksize = 64;
 	data.blocks = 1;
 	data.flags = MMC_DATA_READ;
-
+//	printf("switch freq\n");
 	return mmc_send_cmd(mmc, &cmd, &data);
 }
 
@@ -842,19 +845,17 @@ int sd_change_freq(struct mmc *mmc)
 
 	mmc->card_caps = 0;
 
-	if (mmc_host_is_spi(mmc))
-		return 0;
+	if (mmc_host_is_spi(mmc)) return 0;
 
 	/* Read the SCR to find out if this card supports higher speeds */
 	cmd.cmdidx = MMC_CMD_APP_CMD;
 	cmd.resp_type = MMC_RSP_R1;
 	cmd.cmdarg = mmc->rca << 16;
 	cmd.flags = 0;
-
+//	printf("High Speed possible?\n");
 	err = mmc_send_cmd(mmc, &cmd, NULL);
 
-	if (err)
-		return err;
+	if (err) return err;
 
 	cmd.cmdidx = SD_CMD_APP_SEND_SCR;
 	cmd.resp_type = MMC_RSP_R1;
@@ -868,7 +869,7 @@ retry_scr:
 	data.blocksize = 8;
 	data.blocks = 1;
 	data.flags = MMC_DATA_READ;
-
+//	printf("SD_Version?\n");
 	err = mmc_send_cmd(mmc, &cmd, &data);
 
 	if (err) {
@@ -1026,7 +1027,7 @@ int mmc_startup(struct mmc *mmc)
 	cmd.resp_type = MMC_RSP_R2;
 	cmd.cmdarg = 0;
 	cmd.flags = 0;
-
+//	printf("Put the Card in Identify Mode\n");
 	err = mmc_send_cmd(mmc, &cmd, NULL);
 
 	if (err)
@@ -1059,9 +1060,9 @@ int mmc_startup(struct mmc *mmc)
 	cmd.resp_type = MMC_RSP_R2;
 	cmd.cmdarg = mmc->rca << 16;
 	cmd.flags = 0;
-
+//	printf("Get the Card-Specific Data\n");
 	err = mmc_send_cmd(mmc, &cmd, NULL);
-
+//	printf("Ready Status\n");
 	/* Waiting for the ready status */
 	mmc_send_status(mmc, timeout);
 
@@ -1129,7 +1130,7 @@ int mmc_startup(struct mmc *mmc)
 
 	if (mmc->write_bl_len > 512)
 		mmc->write_bl_len = 512;
-
+//	printf("Transfer Mode\n");
 	/* Select the card, and put it into Transfer Mode */
 	if (!mmc_host_is_spi(mmc)) { /* cmd not supported in spi */
 		cmd.cmdidx = MMC_CMD_SELECT_CARD;
@@ -1141,7 +1142,7 @@ int mmc_startup(struct mmc *mmc)
 		if (err)
 			return err;
 	}
-
+//	printf("Group\n");
 	/*
 	 * For SD, its erase group is always one sector
 	 */
@@ -1185,18 +1186,23 @@ int mmc_startup(struct mmc *mmc)
 		if (ext_csd[EXT_CSD_PARTITIONING_SUPPORT] & PART_SUPPORT)
 			mmc->part_config = ext_csd[EXT_CSD_PART_CONF];
 	}
-
+//	printf("Change Freq: ");
 	if (IS_SD(mmc))
+	{
+		//printf("SD\n");
 		err = sd_change_freq(mmc);
+	}
 	else
+	{
+		//printf("MMC\n");
 		err = mmc_change_freq(mmc);
-
+	}
 	if (err)
 		return err;
 
 	/* Restrict card's capabilities by what the host can do */
 	mmc->card_caps &= mmc->host_caps;
-
+//	printf("Restrict card's capabilities by what the host can do\n");
 	if (IS_SD(mmc)) {
 		if (mmc->card_caps & MMC_MODE_4BIT) {
 			cmd.cmdidx = MMC_CMD_APP_CMD;
@@ -1270,14 +1276,11 @@ int mmc_startup(struct mmc *mmc)
 	mmc->block_dev.lun = 0;
 	mmc->block_dev.type = 0;
 	mmc->block_dev.blksz = mmc->read_bl_len;
+//	printf("nearly finished\n");
 	mmc->block_dev.lba = lldiv(mmc->capacity, mmc->read_bl_len);
-	sprintf(mmc->block_dev.vendor, "Man %06x Snr %08x", mmc->cid[0] >> 8,
-			(mmc->cid[2] << 8) | (mmc->cid[3] >> 24));
-	sprintf(mmc->block_dev.product, "%c%c%c%c%c", mmc->cid[0] & 0xff,
-			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
-			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
-	sprintf(mmc->block_dev.revision, "%d.%d", mmc->cid[2] >> 28,
-			(mmc->cid[2] >> 24) & 0xf);
+	sprintf(mmc->block_dev.vendor, "Man %06x Snr %08x", mmc->cid[0] >> 8, (mmc->cid[2] << 8) | (mmc->cid[3] >> 24));
+	sprintf(mmc->block_dev.product, "%c%c%c%c%c", mmc->cid[0] & 0xff, (mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff, (mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
+	sprintf(mmc->block_dev.revision, "%d.%d", mmc->cid[2] >> 28, (mmc->cid[2] >> 24) & 0xf);
 //	init_part(&mmc->block_dev);
 
 	return 0;
@@ -1323,7 +1326,7 @@ int mmc_register(struct mmc *mmc)
 
 	void * SysBase = g_SysBase;
 	AddHead(&mmc_devices, (struct Node *)mmc);
-	printf("Adding MMC to List\n");
+//	printf("Adding MMC to List\n");
 /*
 	INIT_LIST_HEAD (&mmc->link);
 	list_add_tail (&mmc->link, &mmc_devices);
@@ -1373,8 +1376,12 @@ int mmc_init(struct mmc *mmc)
 	/* The internal partition reset to user partition(0) at every CMD0*/
 	mmc->part_num = 0;
 
+//	printf("Test SD V2\n");
+
 	/* Test for SD version 2 */
 	err = mmc_send_if_cond(mmc);
+
+//	printf("operating condition\n");
 
 	/* Now try to get the SD card's operating condition */
 	err = sd_send_op_cond(mmc);
@@ -1384,11 +1391,12 @@ int mmc_init(struct mmc *mmc)
 		err = mmc_send_op_cond(mmc);
 
 		if (err) {
-			printf("Card did not respond to voltage select!\n");
+			//printf("Card did not respond to voltage select!\n");
 			return UNUSABLE_ERR;
 		}
 	}
 
+//	printf("MMC_Startup\n");
 	err = mmc_startup(mmc);
 	if (err)
 		mmc->has_init = 0;
@@ -1448,7 +1456,7 @@ int mmc_initialize(APTR SysBase)
 	if (board_mmc_init(bis) < 0)
 		cpu_mmc_init(bis);
 
-	print_mmc_devices(SysBase, ',');
+	//print_mmc_devices(SysBase, ',');
 
 	return 0;
 }

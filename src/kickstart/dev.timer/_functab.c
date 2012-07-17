@@ -25,7 +25,8 @@ void timer_AddTime(struct TimerBase *TimerBase, struct TimeVal *src, struct Time
 void timer_SubTime(struct TimerBase *TimerBase, struct TimeVal *src, struct TimeVal *dst);
 void timer_GetSysTime(struct TimerBase *TimerBase, struct TimeVal *src);
 UINT32 timer_ReadEClock(struct TimerBase *TimerBase, struct EClockVal *src);
-__attribute__((no_instrument_function)) BOOL TimerIRQServer(UINT32 number, istate* istate, TimerBase *TimerBase, APTR SysBase);
+__attribute__((no_instrument_function)) BOOL Timer1IRQServer(UINT32 number, istate* istate, TimerBase *TimerBase, APTR SysBase);
+__attribute__((no_instrument_function)) BOOL Timer3IRQServer(UINT32 number, istate* istate, TimerBase *TimerBase, APTR SysBase);
 
 
 APTR timer_FuncTab[] = 
@@ -79,9 +80,13 @@ struct TimerBase *timer_InitDev(struct TimerBase *TimerBase, UINT32 *segList, st
 	NewList((struct List *) &TimerBase->Lists[UNIT_WAITECLOCK] );
 
 	//DPrintF("[Timer] TimerBase: %x, OpenDevice: %x\n", TimerBase, timer_BeginIO);
-	
-	TimerBase->TimerIntServer = CreateIntServer(DevName, TIMER_INT_PRI, TimerIRQServer, TimerBase);
-	AddIntServer(IRQ_TIMER3, TimerBase->TimerIntServer);
+	// VBL (100hz) Timer
+	TimerBase->Timer3IntServer = CreateIntServer(DevName, TIMER_INT_PRI, Timer3IRQServer, TimerBase);
+	AddIntServer(IRQ_TIMER3, TimerBase->Timer3IntServer);
+
+	// EClock Timer
+	TimerBase->Timer1IntServer = CreateIntServer(DevName, TIMER_INT_PRI, Timer1IRQServer, TimerBase);
+	AddIntServer(IRQ_TIMER1, TimerBase->Timer1IntServer);
 	
 	return TimerBase;
 }

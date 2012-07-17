@@ -115,3 +115,5 @@ struct Interrupt *lib_CreateIntServer(SysBase *SysBase, const STRPTR name, INT8 
 
 void lib_AddExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr);
 struct Interrupt *lib_RemExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr);
+
+Task *lib_TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);

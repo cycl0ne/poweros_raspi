@@ -12,10 +12,10 @@ static char Version[] = "\0$VER: sdhci.device 0.1 (__DATE__)\r\n";
 #define SDHCI_INT_PRI 0
 #define SDHCI_INT_NR  INTERRUPT_DMA4
 
-struct SDHCIBase *sdhci_OpenDev(struct SDHCIBase *SDHCIBase, struct IORequest *ioreq, UINT32 unitNum, UINT32 flags);
+APTR sdhci_ExpungeDev(struct SDHCIBase *SDHCIBase);
+APTR sdhci_ExtFuncDev(struct SDHCIBase *SDHCIBase);
+APTR sdhci_OpenDev(struct SDHCIBase *SDHCIBase, struct IORequest *ioreq, UINT32 unitnum, UINT32 flags);
 APTR sdhci_CloseDev(struct SDHCIBase *SDHCIBase, struct IORequest *ioreq);
-UINT32 *sdhci_ExpungeDev(struct SDHCIBase *SDHCIBase);
-UINT32 sdhci_ExtFuncDev(void);
 void sdhci_BeginIO(SDHCIBase *SDHCIBase, struct IORequest *ioreq);
 void sdhci_AbortIO(SDHCIBase *SDHCIBase, struct IORequest *ioreq);
 __attribute__((no_instrument_function)) BOOL SDHCI_IRQServer(UINT32 number, istate* istate, SDHCIBase *SDHCIBase, APTR SysBase);
@@ -23,77 +23,23 @@ __attribute__((no_instrument_function)) BOOL SDHCI_IRQServer(UINT32 number, ista
 
 APTR sdhci_FuncTab[] = 
 {
-// (void(*)) sdhci_OpenDev,
-// (void(*)) sdhci_CloseDev,
-// (void(*)) sdhci_ExpungeDev,
-// (void(*)) sdhci_ExtFuncDev,
+	(void(*)) sdhci_OpenDev,
+	(void(*)) sdhci_CloseDev,
+	(void(*)) sdhci_ExpungeDev,
+	(void(*)) sdhci_ExtFuncDev,
 
-// (void(*)) sdhci_BeginIO,
-// (void(*)) sdhci_AbortIO,
-
- (APTR) ((UINT32)-1)
+	(void(*)) sdhci_BeginIO,
+	(void(*)) sdhci_AbortIO,
+	(APTR) ((UINT32)-1)
 };
 
-INT32 board_mmc_init();
-#include "mmc.h"
-
-static void print_mmcinfo(struct mmc *mmc)
-{
-	printf("Device: %s\n", mmc->name);
-	printf("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
-	printf("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
-	printf("Name: %c%c%c%c%c \n", mmc->cid[0] & 0xff,
-			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
-			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
-
-	printf("Tran Speed: %d\n", mmc->tran_speed);
-	printf("Rd Block Len: %d\n", mmc->read_bl_len);
-
-	printf("%s version %d.%d\n", IS_SD(mmc) ? "SD" : "MMC",
-			(mmc->version >> 4) & 0xf, mmc->version & 0xf);
-
-	printf("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
-	printf("Capacity: ");
-	UINT64 tmp = mmc->capacity;
-	tmp = tmp >>20;
-	printf("%d GiB\n", tmp);
-
-	printf("Bus Width: %d-bit\n", mmc->bus_width);
-}
-
-static int curr_device = -1;
-
-int do_mmcinfo () //cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	struct mmc *mmc;
-
-	if (curr_device < 0) {
-		if (get_mmc_num() > 0)
-			curr_device = 0;
-		else {
-			printf("No MMC device available\n");
-			return 1;
-		}
-	}
-	mmc = find_mmc_device(curr_device);
-	if (mmc) {
-		mmc_init(mmc);
-
-		printf("print Infos:\n");
-
-		print_mmcinfo(mmc);
-		return 0;
-	} else {
-		printf("no mmc device at slot %x\n", curr_device);
-		return 1;
-	}
-}
-
-
-int mmc_initialize(void *SysBase);
+#define _SDHCITASK_STACK_ 0x8000
+void dev_SDHCITask(struct SDHCIBase *SDHCIBase);
+int mmc_initialize(APTR);
 
 struct SDHCIBase *sdhci_InitDev(struct SDHCIBase *SDHCIBase, UINT32 *segList, struct SysBase *SysBase)
 {
+	DPrintF("Init SDHCI %x\n", sizeof(struct SDHCIBase));
 	SDHCIBase->Device.dd_Library.lib_OpenCnt = 0;
 	SDHCIBase->Device.dd_Library.lib_Node.ln_Pri = 0;
 	SDHCIBase->Device.dd_Library.lib_Node.ln_Type = NT_DEVICE;
@@ -103,18 +49,33 @@ struct SDHCIBase *sdhci_InitDev(struct SDHCIBase *SDHCIBase, UINT32 *segList, st
 	SDHCIBase->Device.dd_Library.lib_IDString = (STRPTR)Version;
 
 	SDHCIBase->SysBase = SysBase;
-	
-//	if (0 != OpenDevice("timer.device", UNIT_MICROHZ, (struct IORequest *)&SDHCIBase->Timer0_Unit, 0)) return NULL;
-//	if (0 != OpenDevice("timer.device", UNIT_VBLANK, (struct IORequest *)&SDHCIBase->Timer1_Unit, 0)) return NULL;
-	
-	SDHCIBase->Timer0_Dev = SDHCIBase->Timer0_Unit.tr_node.io_Device;
-	SDHCIBase->Timer1_Dev = SDHCIBase->Timer1_Unit.tr_node.io_Device;
+	// m/u/ndelay Timer
+	//if (0 != OpenDevice("timer.device", UNIT_MICROHZ, (struct IORequest *)&SDHCIBase->Timer0_Unit, 0)) return NULL;
+
 	
 //	SDHCIBase->SDHCI_IntServer = CreateIntServer(DevName, SDHCI_INT_PRI, SDHCI_IRQServer, SDHCIBase);
 //	AddIntServer(SDHCI_INT_NR, SDHCIBase->SDHCI_IntServer);
 
+	SDHCIBase->SDHCITask = TaskCreate(DevName, dev_SDHCITask, SDHCIBase, _SDHCITASK_STACK_, 10);
+
+	#define BCM2835_ARM_MBOX0_BASE 0x2000b880
+	#define BCM2835_ARM_MBOX1_BASE 0x2000b8a0
+	#define MBOX_CHAN_POWER   0 /* for use by the power management interface */
+	#define MBOX_MSG(chan, data28)      (((data28) & ~0xf) | ((chan) & 0xf))
+
+	volatile UINT32 *mbox0_read = (volatile UINT32 *)BCM2835_ARM_MBOX0_BASE;
+	volatile UINT32 *mbox0_write = (volatile UINT32 *)BCM2835_ARM_MBOX1_BASE;
+	volatile UINT32 *mbox0_status = (volatile UINT32 *)(BCM2835_ARM_MBOX0_BASE + 0x18);
+	volatile UINT32 *mbox0_config = (volatile UINT32 *)(BCM2835_ARM_MBOX0_BASE + 0x1C);
+	UINT32 val = 0;
+	// SDHC Poweron
+	val |= 1 << 4;
+
+	while (*mbox0_status & 0x80000000) {}
+	*mbox0_write = MBOX_MSG(0, val); 
+
 	mmc_initialize(SysBase);
-	do_mmcinfo();
+
 	return SDHCIBase;
 }
 

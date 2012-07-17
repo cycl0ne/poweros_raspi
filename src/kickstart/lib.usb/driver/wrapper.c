@@ -25,10 +25,10 @@ int memcmp(const void *s1, const void *s2, size_t n)
 
 void sprintf(char *buf, const char *fmt, ...)
 {
-    va_list pvar;
+/*    va_list pvar;
     va_start(pvar,fmt);
     VSNPrintF(buf, 40, fmt, pvar);
-    va_end(pvar);
+    va_end(pvar);*/
 }
 
 void printf(const char *fmt, ...)

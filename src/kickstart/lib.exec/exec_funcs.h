@@ -95,6 +95,7 @@ struct Interrupt *CreateIntServer(const STRPTR name, INT8 pri, APTR handler, APT
 void AddExcServer(UINT32 intNumber, struct Interrupt *isr);
 struct Interrupt *RemExcServer(UINT32 intNumber, struct Interrupt *isr);
 
+Task *TaskCreate(char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);
 
 
 #define OpenLib(x)  	(((APTR(*)(APTR,APTR)) _GETVECADDR(SysBase,1))(SysBase,x))
@@ -194,4 +195,7 @@ struct Interrupt *RemExcServer(UINT32 intNumber, struct Interrupt *isr);
 #define AddExcServer(x,y)		(((void(*)(APTR, UINT32, struct Interrupt *))					_GETVECADDR(SysBase, 72))(SysBase,x, y))
 #define RemExcServer(x,y)		(((struct Interrupt *(*)(APTR, UINT32, struct Interrupt *))		_GETVECADDR(SysBase, 73))(SysBase,x, y))
 #define DPrintF(x...)		(((VOID(*)(APTR, const char *,...))				_GETVECADDR(SysBase, 74))(SysBase, ##x))
+
+#define TaskCreate(a,b,c,d,e)		(((Task*(*)(APTR, char *, APTR , APTR , UINT32, INT8 ))				_GETVECADDR(SysBase, 75))(SysBase, a,b,c,d,e))
+
 

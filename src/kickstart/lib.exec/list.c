@@ -122,8 +122,16 @@ Node *lib_RemTail(SysBase *SysBase, List *list)
 
 struct Node *lib_RemHead(SysBase *SysBase, struct List *list)
 {
-   if(IsListEmpty(list)) return NULL;
-
+	//if(IsListEmpty(list)) return NULL;
+	struct Node *node;
+	node = list->lh_Head->ln_Succ;
+	if (node)
+	{
+		node->ln_Pred = (struct Node *)list;
+		node = list->lh_Head;
+		list->lh_Head = node->ln_Succ;
+	}   
+#if 0
    struct Node *node = list->lh_Head;
    if (node)
    {
@@ -132,6 +140,7 @@ struct Node *lib_RemHead(SysBase *SysBase, struct List *list)
       node->ln_Succ = NULL;  // Security Reason, we dont want the user to sniff around !
       node->ln_Pred = NULL;
    }
+#endif
    return node;
 }
 

@@ -18,7 +18,6 @@ static void arch_Disable(void)
 	interrupts_disable();
 }
 
-
 void lib_Enable(struct SysBase *SysBase)
 {
   	SysBase->IDNestCnt--;
@@ -28,7 +27,7 @@ void lib_Enable(struct SysBase *SysBase)
 
 void lib_Disable(struct SysBase *SysBase)
 {
-	arch_Disable();
+	if (SysBase->IDNestCnt < 0) arch_Disable();
 	SysBase->IDNestCnt++;
 }
 

@@ -82,7 +82,6 @@ static void AddRequest(struct TimerBase *TimerBase, struct TimeRequest *ioreq)
 	    ioreq->tr_node.io_Flags &= ~IOF_QUICK;
 		break;
 	case UNIT_ECLOCK :
-		break;
 	case UNIT_WAITECLOCK:
 		break;
 	default:

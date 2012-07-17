@@ -19,27 +19,27 @@ struct Message *lib_GetMsg(SysBase *SysBase, struct MsgPort *msgPort)
 
 void lib_PutMsg(SysBase *SysBase, struct MsgPort *msgPort, struct Message *msg)
 {
-   msg->mn_Node.ln_Type = NT_MESSAGE;
-   Disable();
-   AddTail(&msgPort->mp_MsgList, &msg->mn_Node);
-   Enable();
-   if (msgPort->mp_SigTask)
-   {
-     switch(msgPort->mp_Flags&PA_MASK)
-     {
-       case PA_SIGNAL:
-        Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
-        break;
-       case PA_SOFTINT:
-        // This is wrong but.. at the moment it should do ;)
-        Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
-        break;
-       case PA_IGNORE:
-       case PA_UNKNOWN:
-       default:
-        break;
-     }
-   }
+	Disable();
+	msg->mn_Node.ln_Type = NT_MESSAGE;
+	AddTail(&msgPort->mp_MsgList, &msg->mn_Node);
+	if (msgPort->mp_SigTask)
+	{
+		switch(msgPort->mp_Flags&PA_MASK)
+		{
+			case PA_SIGNAL:
+				Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
+				break;
+			case PA_SOFTINT:
+				// This is wrong but.. at the moment it should do ;)
+				Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
+				break;
+			case PA_IGNORE:
+			case PA_UNKNOWN:
+			default:
+			break;
+		}
+	}
+	Enable();
 }
 
 void lib_ReplyMsg(SysBase *SysBase, struct Message *msg)
@@ -47,35 +47,35 @@ void lib_ReplyMsg(SysBase *SysBase, struct Message *msg)
    struct MsgPort *msgPort;
    msgPort = msg->mn_ReplyPort;
 
-   if (msgPort==NULL)
-   {
-     msg->mn_Node.ln_Type=NT_FREEMSG;
-   } else
-   {
-     Disable();
-     msg->mn_Node.ln_Type=NT_REPLYMSG;
-     AddTail(&msgPort->mp_MsgList,&msg->mn_Node);
-     Enable();
-     
-     if (msgPort->mp_SigTask)
-     {
-       switch(msgPort->mp_Flags&PA_MASK)
-       {
-          case PA_SIGNAL:
-           //DPrintF("Signal %x , Bit: %x\n",msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
-           Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
-           break;
-          case PA_SOFTINT:
-           // This is wrong but.. at the moment it should do ;)
-           Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
-           break;
-          case PA_IGNORE:
-          case PA_UNKNOWN:
-          default:
-           break;
-       }
-     }
-   }
+	if (msgPort==NULL)
+	{
+		msg->mn_Node.ln_Type=NT_FREEMSG;
+	} else
+	{
+		Disable();
+		msg->mn_Node.ln_Type=NT_REPLYMSG;
+		AddTail(&msgPort->mp_MsgList,&msg->mn_Node);
+
+		if (msgPort->mp_SigTask)
+		{
+			switch(msgPort->mp_Flags&PA_MASK)
+			{
+			case PA_SIGNAL:
+				//DPrintF("Signal %x , Bit: %x\n",msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
+				Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
+				break;
+			case PA_SOFTINT:
+				// This is wrong but.. at the moment it should do ;)
+				Signal(msgPort->mp_SigTask, 1 << msgPort->mp_SigBit);
+				break;
+			case PA_IGNORE:
+			case PA_UNKNOWN:
+			default:
+				break;
+			}
+		}
+		Enable();
+	}
 }
 
 void lib_Signal(SysBase *SysBase, struct Task *task, UINT32 signalSet)
@@ -98,7 +98,6 @@ void lib_Signal(SysBase *SysBase, struct Task *task, UINT32 signalSet)
     {
 		task->State = READY;
         Remove(&task->Node);
-		task->State = READY;
         Enqueue(&SysBase->TaskReady, &task->Node);
     }
     struct Task *tmp= FindTask(NULL);

@@ -1,6 +1,7 @@
 #include "types.h"
 #include "sysbase.h"
-
+#include "ports.h"
+#include "io.h"
 #include "memory.h"
 
 #include "exec_funcs.h"
@@ -37,8 +38,111 @@ int usb_init(void);
 
 #include "timer.h"
 
+
+struct IOExtTD
+{
+    struct IOStdReq iotd_Req;
+    UINT32           iotd_Count;
+    UINT32           iotd_SecLabel;
+};
+
+void hexdump (APTR SysBase, unsigned char *buf,int len)
+{
+	int cnt3,cnt4;
+	int cnt=0;
+	int cnt2=0;
+
+	do
+	{
+		DPrintF("%x | ",cnt);
+		for (cnt3=0;cnt3<16;cnt3++)
+		{
+			if (cnt<len)
+			{
+				DPrintF("%x ",buf[cnt++]);
+			}
+			else
+				DPrintF("   ");
+		}
+		DPrintF("| ");
+		for (cnt4=0;cnt4<cnt3;cnt4++)
+		{
+			if (cnt2==len)
+				break;
+			if (buf[cnt2]<0x20)
+				DPrintF(".");
+			else
+				if (buf[cnt2]>0x7F && buf[cnt2]<0xC0)
+					DPrintF(".");
+				else
+					DPrintF("%c",buf[cnt2]);
+			cnt2++;
+		}
+		DPrintF("\n");
+	}
+	while (cnt!=len);
+}
+
+struct MsgPort *sysdemo2prt;
+struct MsgPort *sysdemo3prt;
+	
+UINT32 debug_schedule;
+void sys_demo2(APTR SysBase)
+{
+	sysdemo2prt = CreateMsgPort();
+	struct Message *sysdemo2msg = AllocVec(sizeof(struct Message), MEMF_FAST|MEMF_CLEAR);
+	sysdemo2msg->mn_Node.ln_Type = NT_MESSAGE;
+	sysdemo2msg->mn_ReplyPort = sysdemo2prt;
+	
+	struct MsgPort *TimerPort = CreateMsgPort();
+	struct TimeRequest *TimerIO = CreateIORequest(TimerPort, sizeof(struct TimeRequest));
+	while(1) 
+	{
+		//WRITE32(GPCLR0, 1<<16);
+		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
+		TimerIO->tr_time.tv_secs = 10;
+		TimerIO->tr_time.tv_micro = 0;
+		DoIO((struct IORequest *)TimerIO);
+		DPrintF("5Sec Timeout\n");
+		PutMsg(sysdemo3prt, sysdemo2msg);
+		WaitPort(sysdemo2prt);
+		struct Message *tmp = GetMsg(sysdemo2prt);
+		ReplyMsg(tmp);
+		DPrintF("Antwort auf Nachricht3\n");
+	}
+}
+
+void sys_demo3(APTR SysBase)
+{
+	sysdemo3prt = CreateMsgPort();
+	struct Message *sysdemo3msg = AllocVec(sizeof(struct Message), MEMF_FAST|MEMF_CLEAR);
+	sysdemo3msg->mn_Node.ln_Type = NT_MESSAGE;
+	sysdemo3msg->mn_ReplyPort = sysdemo3prt;
+	
+	struct MsgPort *TimerPort = CreateMsgPort();
+	struct TimeRequest *TimerIO = CreateIORequest(TimerPort, sizeof(struct TimeRequest));
+	while(1) 
+	{
+		//WRITE32(GPCLR0, 1<<16);
+		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
+		TimerIO->tr_time.tv_secs = 10;
+		TimerIO->tr_time.tv_micro = 0;
+		DoIO((struct IORequest *)TimerIO);
+		
+		DPrintF("5Sec Timeout\n");
+//		PutMsg(sysdemo2prt, sysdemo3msg);
+//		WaitPort(sysdemo3prt);
+//		struct Message *tmp = GetMsg(sysdemo3prt);
+//		ReplyMsg(tmp);
+//		DPrintF("Antwort auf Nachricht2\n");
+	}
+}
+
+
 void sys_demo() 
 {
+	//debug_schedule = 1;
+
 	lib_Print_uart0("[DEMO] Started\n");	
 	//	debug_int();
 	
@@ -46,25 +150,44 @@ void sys_demo()
 	struct MsgPort *TimerPort = CreateMsgPort();
 	struct TimeRequest *TimerIO = CreateIORequest(TimerPort, sizeof(struct TimeRequest));
 
-//	lib_hexstrings(0xdeadc0de);
-//	lib_hexstrings(SysBase->TDNestCnt);
-//	lib_hexstrings(SysBase->IDNestCnt);
+	struct MsgPort *SDHCIPort = CreateMsgPort();
+	struct IOExtTD *mmcIO = CreateIORequest(SDHCIPort, sizeof(struct IOExtTD));
+
+	if (TimerPort == NULL) DPrintF("Failed to allocate SDHCIPort\n");
+	if (TimerIO == NULL) DPrintF("Failed to allocate mmcIO\n");
+	if (SDHCIPort == NULL) DPrintF("Failed to allocate SDHCIPort\n");
+	if (mmcIO == NULL) DPrintF("Failed to allocate mmcIO\n");
+	
+	
+	if (0 != OpenDevice("sdhci.device", 0, (struct IORequest *)mmcIO, 0))
+	{
+		DPrintF("Open failed SDHCI \n");
+		for(;;);
+	}
+#define TD_CHANGENUM    (CMD_NONSTD + 4)
+	mmcIO->iotd_Req.io_Command = CMD_UPDATE;
+	APTR memory = AllocVec(0x8000, MEMF_FAST|MEMF_CLEAR);
+
+	if (memory == NULL) DPrintF("Failed to allocate memory\n");
+	
+	mmcIO->iotd_Req.io_Data = memory;
+	mmcIO->iotd_Req.io_Length = 64;
+	mmcIO->iotd_Req.io_Offset = 0;
+
+	//DoIO((struct IORequest *)mmcIO);	
 	
 	UINT32 sel = READ32(GPFSEL1);
 	sel &= ~(0b111 << 18);
 	sel |= (0b001 << 18);
 	WRITE32(GPFSEL1,sel);
 
-	struct TimeRequest time;
 	if (0 != OpenDevice("timer.device", UNIT_VBLANK, (struct IORequest *)TimerIO, 0))
 	{
 		DPrintF("Open failed \n");
 		for(;;);
 	}
-	
-	TimerIO->tr_node.io_Command = TR_ADDREQUEST;
-	TimerIO->tr_time.tv_secs = 5;
-	TimerIO->tr_time.tv_micro = 0;
+
+	DPrintF("Timer opened\n");
 	
 	//	Forbid();
 	//	Disable();
@@ -73,16 +196,21 @@ void sys_demo()
 //	USB_ShowTree();
 //	USB_Inf();
 //	Enable();
+	//hexdump(SysBase, memory, 0x200);
+
+
 	while(1) 
 	{
-		WRITE32(GPCLR0, 1<<16);
+		//WRITE32(GPCLR0, 1<<16);
 		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
 		TimerIO->tr_time.tv_secs = 5;
 		TimerIO->tr_time.tv_micro = 0;
+		DPrintF("Going into DoIO\n");
+//		debug_schedule = 1;
 		DoIO((struct IORequest *)TimerIO);
 		DPrintF("5Sec Timeout\n");
 		//		for (int i = 0; i < 0x100000; i++) NOP;
-		WRITE32(GPSET0, 1<<16);
+		//WRITE32(GPSET0, 1<<16);
 		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
 		TimerIO->tr_time.tv_secs = 5;
 		TimerIO->tr_time.tv_micro = 0;
@@ -122,8 +250,6 @@ struct MemHeader * INTERN_AddMemList(UINT32 size, UINT32 attribute, INT32 pri, A
 	mem->mh_Free  = mem->mh_First->mc_Bytes;//size-(sizeof(struct MemHeader));
 	return mem;
 }
-
-Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);
 
 void install_exception_handlers(void);
 void exception_init(void);
@@ -210,6 +336,7 @@ void ExecInit(void) {
 
 	lib_Print_uart0("PowerOS ARM (Raspberry Pi Port)\n");
 	int i=-1;
+	debug_schedule = 0;
 	lib_Print_uart0("[INIT] Adding Memory\n");
 	struct MemHeader *mh = INTERN_AddMemList(0x4000000, MEMF_FAST, 0, (APTR)0x100000, "RASPI_Memory");
 	//AddMemList(0x4000000, MEMF_FAST, 0, (APTR)0x100000, "RASPI_Memory");
@@ -228,7 +355,9 @@ void ExecInit(void) {
 	SysBase->TDNestCnt = -1;
 	SysBase->IDNestCnt = -1;
 
-	Task *idle2 = TaskCreate(SysBase, "demo", sys_demo, SysBase, 4096*2 , 0);
+	Task *idle2 = TaskCreate("demo", sys_demo, SysBase, 4096*4 , 0);
+//	Task *idle2 = TaskCreate("demo2", sys_demo2, SysBase, 4096*4 , 0);
+//	Task *idle3 = TaskCreate("demo3", sys_demo3, SysBase, 4096*4 , 0);
 
 	DPrintF("[INIT] Schedule -> leaving Kernel Init\n");
 	Schedule();

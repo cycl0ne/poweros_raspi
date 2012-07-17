@@ -49,12 +49,17 @@ inline static void bcm2835_sdhci_raw_writel(struct sdhci_host *host, UINT32 val,
 	 * (Which is just as well - otherwise we'd have to nobble the DMA engine
 	 * too)
 	 */
-	while (get_timer(last_write) < twoticks_delay) {
+ 	if (reg != SDHCI_BUFFER && host->clock != 0) {
+		UINT32 ns_2clk = 2000000000/host->clock;
 
+		printf("two ticks delay: %d\n", ns_2clk);
+		udelay(ns_2clk);
+//	while (get_timer(last_write) < 175124) {//twoticks_delay) {
+//
+//	}
 	}
-
-	writel(val, host->ioaddr + reg);
 	last_write = get_timer(0);
+	writel(val, host->ioaddr + reg);
 
 	/*
 	 * Hackish. It seems that some U-Boot timeouts are not 
@@ -173,7 +178,7 @@ INT32 bcm2835_sdh_init(UINT32 regbase)
 		return 1;
 	}
 
-	printf("malloc host: %x\n", host);
+	//printf("malloc host: %x\n", host);
 	
 	host->name = BCMSDH_NAME;
 	host->ioaddr = (void *)regbase;
@@ -196,7 +201,7 @@ INT32 bcm2835_sdh_init(UINT32 regbase)
 	twoticks_delay = (twoticks_delay + 1000 - 1) / 1000;
 
 	host->version = sdhci_readw(host, SDHCI_HOST_VERSION) & 0xff;
-	printf("version: %d\n", host->version);
+	//printf("version: %d\n", host->version);
 	add_sdhci(host, MIN_FREQ, 0);
 
 	return 0;
