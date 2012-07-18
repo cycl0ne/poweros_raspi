@@ -152,15 +152,18 @@ void WakeupTask(SysBase *SysBase, struct Task *Task, UINT32 signal)
 {
 	UINT32 ipl = interrupts_disable();
 	// Remove him from the Waitqueue
-	Remove(&Task->Node);
-	Task->SavedContext = Task->WaitContext;
-    Task->SigRecvd|=signal;
-	Task->State = READY;
+	if (Task == WAIT)
+	{
+		Remove(&Task->Node);
+		Task->SavedContext = Task->WaitContext;
+		Task->State = READY;
 //	Task->CPU_Usage++;
 //	Task->TDNestCnt = SysBase->TDNestCnt;
 //	Task->IDNestCnt = SysBase->IDNestCnt;
 	Enqueue(&SysBase->TaskReady, &Task->Node);
-//	if (Task->Switch) Task->Switch(SysBase);
+	}
+	//	if (Task->Switch) Task->Switch(SysBase);
+	Task->SigRecvd|=signal;
 	interrupts_restore(ipl);
 }
 
