@@ -83,69 +83,66 @@ void hexdump (APTR SysBase, unsigned char *buf,int len)
 	while (cnt!=len);
 }
 
-struct MsgPort *sysdemo2prt;
-struct MsgPort *sysdemo3prt;
-	
 UINT32 debug_schedule;
+
 void sys_demo2(APTR SysBase)
 {
-	sysdemo2prt = CreateMsgPort();
-	struct Message *sysdemo2msg = AllocVec(sizeof(struct Message), MEMF_FAST|MEMF_CLEAR);
-	sysdemo2msg->mn_Node.ln_Type = NT_MESSAGE;
-	sysdemo2msg->mn_ReplyPort = sysdemo2prt;
-	
-	struct MsgPort *TimerPort = CreateMsgPort();
-	struct TimeRequest *TimerIO = CreateIORequest(TimerPort, sizeof(struct TimeRequest));
-	while(1) 
-	{
-		//WRITE32(GPCLR0, 1<<16);
-		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
-		TimerIO->tr_time.tv_secs = 10;
-		TimerIO->tr_time.tv_micro = 0;
-		DoIO((struct IORequest *)TimerIO);
-		DPrintF("5Sec Timeout\n");
-		PutMsg(sysdemo3prt, sysdemo2msg);
-		WaitPort(sysdemo2prt);
-		struct Message *tmp = GetMsg(sysdemo2prt);
-		ReplyMsg(tmp);
-		DPrintF("Antwort auf Nachricht3\n");
-	}
-}
+	DPrintF("[Demo2] started\n");
+	struct MsgPort *Port = CreateMsgPort();
+	struct IORequest *iO = CreateIORequest(Port, sizeof(struct IORequest));
 
-void sys_demo3(APTR SysBase)
-{
-	sysdemo3prt = CreateMsgPort();
-	struct Message *sysdemo3msg = AllocVec(sizeof(struct Message), MEMF_FAST|MEMF_CLEAR);
-	sysdemo3msg->mn_Node.ln_Type = NT_MESSAGE;
-	sysdemo3msg->mn_ReplyPort = sysdemo3prt;
-	
 	struct MsgPort *TimerPort = CreateMsgPort();
 	struct TimeRequest *TimerIO = CreateIORequest(TimerPort, sizeof(struct TimeRequest));
-	while(1) 
+
+	if (0 != OpenDevice("testdev.device", 0, (struct IORequest *)iO, 0))
 	{
-		//WRITE32(GPCLR0, 1<<16);
-		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
-		TimerIO->tr_time.tv_secs = 10;
-		TimerIO->tr_time.tv_micro = 0;
-		DoIO((struct IORequest *)TimerIO);
+		DPrintF("Open failed testdev.device \n");
+		for(;;);
+	}
+	if (0 != OpenDevice("timer.device", UNIT_VBLANK, (struct IORequest *)TimerIO, 0))
+	{
+		DPrintF("Open failed timer.device\n");
+		for(;;);
+	}
+
+	DPrintF("IO Signal:%x\n", 1<<Port->mp_SigBit);
+	DPrintF("IO Device:%x, %s\n", iO->io_Device, iO->io_Device->dd_Library.lib_Node.ln_Name);
+	for (int i = -1; i>-6; i--) DPrintF("IO Device Function: %x\n", iO->io_Device[i]);
 		
-		DPrintF("5Sec Timeout\n");
-//		PutMsg(sysdemo2prt, sysdemo3msg);
-//		WaitPort(sysdemo3prt);
-//		struct Message *tmp = GetMsg(sysdemo3prt);
-//		ReplyMsg(tmp);
-//		DPrintF("Antwort auf Nachricht2\n");
+	DPrintF("Timer Signal:%x\n", 1<<TimerPort->mp_SigBit);
+	
+	while(1) 
+	{
+		iO->io_Command = CMD_UPDATE;
+		DPrintF("CMD_Update\n");
+		DoIO(iO);
+		DPrintF("CMD_Update\n");
+
+		DPrintF("wait 5sec\n");
+		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
+		TimerIO->tr_time.tv_secs = 5;
+		TimerIO->tr_time.tv_micro = 0;
+//		DoIO((struct IORequest *)TimerIO);
+//		DPrintF("5Sec Timeout\n");
+
+		iO->io_Command = CMD_READ;
+		DoIO(iO);
+		DPrintF("CMD_Read\n");
+
+		DPrintF("wait 5sec\n");
+		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
+		TimerIO->tr_time.tv_secs = 5;
+		TimerIO->tr_time.tv_micro = 0;
+//		DoIO((struct IORequest *)TimerIO);
+//		DPrintF("5Sec Timeout\n");
 	}
 }
-
 
 void sys_demo() 
 {
 	//debug_schedule = 1;
-
 	lib_Print_uart0("[DEMO] Started\n");	
 	//	debug_int();
-	
 	SysBase *SysBase = g_SysBase;
 	struct MsgPort *TimerPort = CreateMsgPort();
 	struct TimeRequest *TimerIO = CreateIORequest(TimerPort, sizeof(struct TimeRequest));
@@ -181,6 +178,11 @@ void sys_demo()
 	sel |= (0b001 << 18);
 	WRITE32(GPFSEL1,sel);
 
+	if (0 != OpenDevice("sdhci.device", 0, (struct IORequest *)mmcIO, 0))
+	{
+		DPrintF("Open failed SDHCI \n");
+		for(;;);
+	}
 	if (0 != OpenDevice("timer.device", UNIT_VBLANK, (struct IORequest *)TimerIO, 0))
 	{
 		DPrintF("Open failed \n");
@@ -355,8 +357,8 @@ void ExecInit(void) {
 	SysBase->TDNestCnt = -1;
 	SysBase->IDNestCnt = -1;
 
-	Task *idle2 = TaskCreate("demo", sys_demo, SysBase, 4096*4 , 0);
-//	Task *idle2 = TaskCreate("demo2", sys_demo2, SysBase, 4096*4 , 0);
+//	Task *idle2 = TaskCreate("demo", sys_demo, SysBase, 4096*4 , 0);
+	Task *idle2 = TaskCreate("demo2", sys_demo2, SysBase, 4096*4 , -1);
 //	Task *idle3 = TaskCreate("demo3", sys_demo3, SysBase, 4096*4 , 0);
 
 	DPrintF("[INIT] Schedule -> leaving Kernel Init\n");

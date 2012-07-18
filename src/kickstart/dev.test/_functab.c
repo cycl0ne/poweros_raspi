@@ -93,7 +93,7 @@ static void dev_Task(struct TestDevBase *TestDevBase)
 	{
 		signal = 0;
 		TestDevBase->Timer_Unit->tr_node.io_Command	= TR_ADDREQUEST;
-		TestDevBase->Timer_Unit->tr_time.tv_secs	= 2;
+		TestDevBase->Timer_Unit->tr_time.tv_secs	= 10;
 		TestDevBase->Timer_Unit->tr_time.tv_micro	= 0;
 		SendIO((struct IORequest *)TestDevBase->Timer_Unit);
 		signal = Wait(waitSignal);
@@ -104,6 +104,8 @@ static void dev_Task(struct TestDevBase *TestDevBase)
 			while(NULL != ior)
 			{
 				if (tdev_PerformIO(TestDevBase, ior)) ReplyMsg((struct Message *)ior);
+				// Get next Message
+				ior = (struct IORequest *)GetMsg(TestDevBase->TaskPort);
 			}
 		} else
 		{
@@ -112,7 +114,7 @@ static void dev_Task(struct TestDevBase *TestDevBase)
 			if (TestDevBase->Timer == 5) DPrintF("[TestDevTask] Timer called us 5 Times\n");
 		}
 	}
-
+	DPrintF("[TestDevTask] Exiting Task\n");
 	// Shutting down, give all Resources back! (TODO)
 }
 
