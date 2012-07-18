@@ -16,14 +16,15 @@ extern SysBase *g_SysBase;
 
 void lib_AddExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr)
 {
+	UINT32 ipl;
 	if (NULL==isr) return;
 	if (intNumber>EXC_VECTORS) return;
 	isr->is_Cycles = 0;
 	isr->is_Count = 0;
 	
-	Disable();
+	ipl = Disable();
 	Enqueue((struct List *)&SysBase->ExcServer[intNumber], (struct Node *)isr);
-	Enable();
+	Enable(ipl);
 	if (!IsListEmpty(&SysBase->ExcServer[intNumber])) 
 	{
 	    //if (intNumber>=8) arch_unmask_irq(2);
@@ -34,14 +35,15 @@ void lib_AddExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr)
 
 void lib_AddIntServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr)
 {
+	UINT32 ipl;
 	if (NULL==isr) return;
 	if (intNumber < 0 && intNumber > NR_IRQS) return;
 	isr->is_Cycles = 0;
 	isr->is_Count = 0;
 	
-	Disable();
+	ipl = Disable();
 	Enqueue((struct List *)&SysBase->IRQServer[intNumber], (struct Node *)isr);
-	Enable();
+	Enable(ipl);
 	if (!IsListEmpty(&SysBase->IRQServer[intNumber])) 
 	{
 	    //if (intNumber>=8) arch_unmask_irq(2);
@@ -52,22 +54,24 @@ void lib_AddIntServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr)
 
 struct Interrupt *lib_RemExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr)
 {
+	UINT32 ipl;
 	if (NULL==isr) return NULL;
 	if (intNumber < 0 && intNumber > EXC_VECTORS) return NULL;
-	Disable();
+	ipl = Disable();
 	Remove((struct Node *)isr);
-	Enable();
+	Enable(ipl);
 	//if (IsListEmpty(&SysBase->IntSrv[intNumber])) arch_mask_irq(intNumber);
 	return NULL;
 }
 
 struct Interrupt *lib_RemIntServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr)
 {
+	UINT32 ipl;
 	if (NULL==isr) return NULL;
 	if (intNumber < 0 && intNumber > NR_IRQS) return NULL;
-	Disable();
+	ipl = Disable();
 	Remove((struct Node *)isr);
-	Enable();
+	Enable(ipl);
 	//if (IsListEmpty(&SysBase->IntSrv[intNumber])) arch_mask_irq(intNumber);
 	return NULL;
 }

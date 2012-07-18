@@ -58,6 +58,7 @@ typedef struct Task
 	APTR				TaskFunc;
 	APTR				TaskArg;
 	StackContext		SavedContext;
+	StackContext		WaitContext;
 	UINT8				*Stack;
 	UINT32				StackSize;
 } Task;	

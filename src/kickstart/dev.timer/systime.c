@@ -5,10 +5,10 @@
 
 void timer_GetSysTime(struct TimerBase *TimerBase, struct TimeVal *src)
 {
-	Disable();
+	UINT32 ipl = Disable();
 	src->tv_micro = TimerBase->CurrentTime.tv_micro;
 	src->tv_secs  = TimerBase->CurrentTime.tv_secs;
-	Enable();
+	Enable(ipl);
 }
 #define STC_FREQ_HZ  1000000
 

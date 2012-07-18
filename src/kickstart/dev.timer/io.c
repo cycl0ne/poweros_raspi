@@ -7,10 +7,10 @@ void timer_SubTime(struct TimerBase *TimerBase, struct TimeVal *src, struct Time
 
 static void SetSysTime(TimerBase *TimerBase, struct TimeRequest *ioreq)
 {
-    Disable();
+    UINT32 ipl = Disable();
 	TimerBase->CurrentTime.tv_micro= ioreq->tr_time.tv_micro;
 	TimerBase->CurrentTime.tv_secs = ioreq->tr_time.tv_secs;
-	Enable();
+	Enable(ipl);
 }
 
 static void GetSysTime(TimerBase *TimerBase, struct TimeRequest *ioreq)
@@ -48,15 +48,16 @@ static void AddWaiter(TimerBase *TimerBase, struct MinList *list, struct TimeReq
 static void AddRequest(struct TimerBase *TimerBase, struct TimeRequest *ioreq)
 {
 	UINT32 unitNum;
+	UINT32 ipl;
 	unitNum = (UINT32)ioreq->tr_node.io_Unit;
 	
 	switch(unitNum)
 	{
 	case UNIT_WAITUNTIL :
-		Disable();
+		ipl = Disable();
 		if(timer_CmpTime(TimerBase, &TimerBase->CurrentTime, &ioreq->tr_time) <= 0)
 		{
-			Enable();
+			Enable(ipl);
 			ioreq->tr_time.tv_secs = ioreq->tr_time.tv_micro = 0;
 			ioreq->tr_node.io_Error = 0;
 			ReplyMsg((struct Message *)ioreq);
@@ -65,19 +66,19 @@ static void AddRequest(struct TimerBase *TimerBase, struct TimeRequest *ioreq)
 		{
 			/* Ok, we add this to the list */
 			AddWaiter(TimerBase, &TimerBase->Lists[UNIT_WAITUNTIL], ioreq);
-			Enable();
+			Enable(ipl);
 			ioreq->tr_node.io_Flags &= ~IOF_QUICK;
 		}
 		break;
 
 	case UNIT_MICROHZ:
 	case UNIT_VBLANK :
-	    Disable();
+	    ipl = Disable();
 		//DPrintF("[Timer.device] AddTime\n");
 	    timer_AddTime(TimerBase, &TimerBase->Elapsed, &ioreq->tr_time);
 		//DPrintF("[Timer.device] AddWaiter\n");
         AddWaiter(TimerBase, &TimerBase->Lists[UNIT_VBLANK], ioreq);
-	    Enable();
+	    Enable(ipl);
 		//DPrintF("[Timer.device] return\n");
 	    ioreq->tr_node.io_Flags &= ~IOF_QUICK;
 		break;

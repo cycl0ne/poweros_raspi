@@ -12,11 +12,11 @@ BOOL tdev_PerformIO(struct TestDevBase *TestDevBase, struct IORequest *ior)
 	switch(ior->io_Command)
 	{
 		case CMD_READ:
-			DPrintF("READ (NON Quick Command)\n");
+			DPrintF("[TestDev.device] READ (NON Quick Command)\n");
             SetError(0);
 			break;
 		case CMD_UPDATE:
-			DPrintF("Update (Quick Command)\n");
+			DPrintF("[TestDev.device] Update (Quick Command)\n");
             SetError(0);
 			break;
 		default:

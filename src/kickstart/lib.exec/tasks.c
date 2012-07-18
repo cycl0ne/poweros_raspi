@@ -19,13 +19,14 @@ BOOL interrupts_disabled(void);
 
 Task *lib_FindTask(SysBase *SysBase, STRPTR name)
 {
+	UINT32 ipl;
   if (name == NULL) return SysBase->thisTask;
   Task *task=NULL;
 
-  Disable();
+  ipl = Disable();
   task = (Task *)FindName((List*)&SysBase->TaskReady, name);
   if (task == NULL) task = (Task *)FindName((List*)&SysBase->TaskWait, name);
-  Enable();
+  Enable(ipl);
   return task;
 }
 
@@ -84,10 +85,10 @@ Task *lib_AddTask(SysBase *SysBase, Task *newTask, APTR codeStart, APTR finalPC,
 	context_save(&newTask->SavedContext);
 	context_set(&newTask->SavedContext, FADDR(TaskRun), (UINTPTR) newTask->Stack, newTask->StackSize);
 	UINT32 ipl = interrupts_disable();
-	newTask->SavedContext.ipl = interrupts_read();
-	interrupts_restore(ipl);
-	
+	newTask->SavedContext.ipl = interrupts_read();	
 	Enqueue(&SysBase->TaskReady,&newTask->Node);
+	interrupts_restore(ipl);
+
 	return newTask;
 }
 
@@ -162,7 +163,5 @@ INT8 lib_SetTaskPri(SysBase *SysBase, struct Task *task, INT16 pri)
 	if ((SysBase->TDNestCnt < 0) && (!(IsListEmpty(&SysBase->TaskReady)))) Schedule();
 	return old;
 }
-
-
 
 

@@ -88,16 +88,15 @@ static void dev_Task(struct TestDevBase *TestDevBase)
 	UINT32 signalTask = (1 << TestDevBase->TaskPort->mp_SigBit);
 	UINT32 signalTime = (1 << TestDevBase->TimerPort->mp_SigBit);
 	UINT32 waitSignal = signalTask | signalTime;
-
+	TestDevBase->Timer_Unit->tr_node.io_Command	= TR_ADDREQUEST;
+	TestDevBase->Timer_Unit->tr_time.tv_secs	= 10;
+	TestDevBase->Timer_Unit->tr_time.tv_micro	= 0;
+	SendIO((struct IORequest *)TestDevBase->Timer_Unit);
+	
 	while(!TestDevBase->Flags & F_SHUTDOWN)
 	{
-		signal = 0;
-		TestDevBase->Timer_Unit->tr_node.io_Command	= TR_ADDREQUEST;
-		TestDevBase->Timer_Unit->tr_time.tv_secs	= 10;
-		TestDevBase->Timer_Unit->tr_time.tv_micro	= 0;
-		SendIO((struct IORequest *)TestDevBase->Timer_Unit);
 		signal = Wait(waitSignal);
-		
+		//DPrintF("[TestDevTask] GotSignal %x\n", signal);		
 		if(signal&signalTask)
 		{
 			struct IORequest *ior = (struct IORequest *)GetMsg(TestDevBase->TaskPort);
@@ -111,7 +110,12 @@ static void dev_Task(struct TestDevBase *TestDevBase)
 		{
 			// its the timer calling us !
 			TestDevBase->Timer++;
-			if (TestDevBase->Timer == 5) DPrintF("[TestDevTask] Timer called us 5 Times\n");
+			DPrintF("[TestDevTask] Timer called us 10sec\n");
+			//if (TestDevBase->Timer%5 == 0) DPrintF("[TestDevTask] Timer called us 5 Times\n");
+			TestDevBase->Timer_Unit->tr_node.io_Command	= TR_ADDREQUEST;
+			TestDevBase->Timer_Unit->tr_time.tv_secs	= 10;
+			TestDevBase->Timer_Unit->tr_time.tv_micro	= 0;
+			SendIO((struct IORequest *)TestDevBase->Timer_Unit);
 		}
 	}
 	DPrintF("[TestDevTask] Exiting Task\n");

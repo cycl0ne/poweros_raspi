@@ -7,28 +7,31 @@ void lib_Print_uart0(const char *s);
 #include "raspi_platform.h"
 UINT32 interrupts_disable(void);
 UINT32 interrupts_enable(void);
+void interrupts_restore(UINT32 ipl);
 
 static void arch_Enable(void)
 {
 	interrupts_enable();
 }
 
-static void arch_Disable(void)
+static UINT32 arch_Disable(void)
 {
-	interrupts_disable();
+	return interrupts_disable();
 }
 
-void lib_Enable(struct SysBase *SysBase)
+void lib_Enable(struct SysBase *SysBase, UINT32 ipl)
 {
-  	SysBase->IDNestCnt--;
+//  	SysBase->IDNestCnt--;
 //	lib_Print_uart0("Enable\n");
-	if (SysBase->IDNestCnt < 0) arch_Enable();
+//	if (SysBase->IDNestCnt < 0) arch_Enable();
+	interrupts_restore(ipl);
 }
 
-void lib_Disable(struct SysBase *SysBase)
+UINT32 lib_Disable(struct SysBase *SysBase)
 {
-	if (SysBase->IDNestCnt < 0) arch_Disable();
-	SysBase->IDNestCnt++;
+	return interrupts_disable();
+	//if (SysBase->IDNestCnt < 0) return interrupts_disable();
+	//SysBase->IDNestCnt++;
 }
 
 void lib_Permit(struct SysBase *SysBase)

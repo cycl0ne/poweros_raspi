@@ -84,7 +84,9 @@ void lib_Dispatch(void)
 			MakeTaskDestroy(SysBase, Task);
 			break;
 		case WAIT:
-			MakeTaskWait(SysBase, Task);
+			// Do nothing
+			//MakeTaskWait(SysBase, Task);
+			DPrintF("[Wait] here!\n");
 			break;
 		case DEAD:
 		default:
@@ -97,7 +99,7 @@ void lib_Dispatch(void)
 		Task = NULL;
 	}
 	Task = (struct Task *)RemHead(&SysBase->TaskReady);
-	if (debug_schedule) DPrintF("[DISPATCH] %s (%x)\n", Task->Node.ln_Name, Task->State);
+	//DPrintF("[DISPATCH] %s (%x)\n", Task->Node.ln_Name, Task->State);
 	MakeTaskRun(SysBase, Task);
 	SysBase->thisTask = Task;
 	before_thread_runs_arch(Task);

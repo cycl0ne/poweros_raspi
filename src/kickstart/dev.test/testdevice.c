@@ -61,10 +61,7 @@ void tdev_BeginIO(TestDevBase *TestDevBase, struct IORequest *ioreq)
 				break;
 		}
 		// All the rest can be done Sync
-
-		DPrintF("PerformIO\n");
 		tdev_PerformIO(TestDevBase, ioreq);
-		DPrintF("PerformIO2\n");
 		return;
 	} else
 	{

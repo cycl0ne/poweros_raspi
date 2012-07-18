@@ -50,7 +50,7 @@ struct MsgPort *lib_CreateMsgPort(SysBase *SysBase)
        		ret->mp_Flags  = PA_SIGNAL;
        		ret->mp_Node.ln_Type = NT_MSGPORT;
        		ret->mp_SigTask = (struct Task *)FindTask(NULL);
-       		DPrintF("MsgPort Task: %x [%s]\n",ret->mp_SigTask, ret->mp_SigTask->Node.ln_Name);
+       		//DPrintF("MsgPort Task: %x [%s]\n",ret->mp_SigTask, ret->mp_SigTask->Node.ln_Name);
        		NewListType(&ret->mp_MsgList, NT_MSGPORT);
      	} else
      	{

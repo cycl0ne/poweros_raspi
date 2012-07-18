@@ -105,36 +105,31 @@ void sys_demo2(APTR SysBase)
 		for(;;);
 	}
 
-	DPrintF("IO Signal:%x\n", 1<<Port->mp_SigBit);
-	DPrintF("IO Device:%x, %s\n", iO->io_Device, iO->io_Device->dd_Library.lib_Node.ln_Name);
-	for (int i = -1; i>-6; i--) DPrintF("IO Device Function: %x\n", iO->io_Device[i]);
+	//DPrintF("IO Signal:%x\n", 1<<Port->mp_SigBit);
+	//DPrintF("IO Device:%x, %s\n", iO->io_Device, iO->io_Device->dd_Library.lib_Node.ln_Name);
+	//for (int i = -1; i>-6; i--) DPrintF("IO Device Function: %x\n", iO->io_Device[i]);
 		
-	DPrintF("Timer Signal:%x\n", 1<<TimerPort->mp_SigBit);
-	
+	//DPrintF("Timer Signal:%x\n", 1<<TimerPort->mp_SigBit);
+
 	while(1) 
 	{
 		iO->io_Command = CMD_UPDATE;
-		DPrintF("CMD_Update\n");
 		DoIO(iO);
-		DPrintF("CMD_Update\n");
 
-		DPrintF("wait 5sec\n");
 		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
 		TimerIO->tr_time.tv_secs = 5;
 		TimerIO->tr_time.tv_micro = 0;
-//		DoIO((struct IORequest *)TimerIO);
-//		DPrintF("5Sec Timeout\n");
+		DoIO((struct IORequest *)TimerIO);
+		DPrintF("[Demo2] 5Sec Timeout\n");
 
 		iO->io_Command = CMD_READ;
 		DoIO(iO);
-		DPrintF("CMD_Read\n");
 
-		DPrintF("wait 5sec\n");
 		TimerIO->tr_node.io_Command = TR_ADDREQUEST;
 		TimerIO->tr_time.tv_secs = 5;
 		TimerIO->tr_time.tv_micro = 0;
-//		DoIO((struct IORequest *)TimerIO);
-//		DPrintF("5Sec Timeout\n");
+		DoIO((struct IORequest *)TimerIO);
+		DPrintF("[Demo2] 5Sec Timeout\n");
 	}
 }
 

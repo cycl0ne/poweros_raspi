@@ -11,8 +11,8 @@
 
 void Permit();
 void Forbid();
-void Enable();
-void Disable();
+void Enable(UINT32);
+UINT32 Disable();
 
 void AddHead( List *list, Node *node);
 void AddTail( List *list, Node *node);
@@ -106,8 +106,8 @@ Task *TaskCreate(const char *name, APTR codeStart, APTR data, UINT32 stackSize, 
 // Ables
 #define Permit()		(((APTR(*)(APTR)) _GETVECADDR(SysBase,5))(SysBase))
 #define Forbid()		(((APTR(*)(APTR)) _GETVECADDR(SysBase,6))(SysBase))
-#define Enable()		(((APTR(*)(APTR)) _GETVECADDR(SysBase,7))(SysBase))
-#define Disable()		(((APTR(*)(APTR)) _GETVECADDR(SysBase,8))(SysBase))
+#define Enable(a)		(((VOID(*)(APTR, UINT32)) _GETVECADDR(SysBase,7))(SysBase, a))
+#define Disable()		(((UINT32(*)(APTR)) _GETVECADDR(SysBase,8))(SysBase))
 
 
 #define NewList(x)		(((void(*)(APTR, struct List *)) 								_GETVECADDR(SysBase, 9))(SysBase,x))

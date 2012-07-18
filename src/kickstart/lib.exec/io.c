@@ -76,9 +76,9 @@ INT32 lib_WaitIO(SysBase *SysBase, struct IORequest *iORequest)
 
 	if(iORequest->io_Message.mn_Node.ln_Type == NT_REPLYMSG)
 	{
-		Disable();
+		UINT32 ipl = Disable();
 		Remove(&iORequest->io_Message.mn_Node);
-		Enable();
+		Enable(ipl);
 	}
 	return (INT32)iORequest->io_Error;
 }
