@@ -24,8 +24,8 @@ Node *lib_RemTail(SysBase *SysBase, List *list);
 Task *lib_FindTask(SysBase *SysBase, STRPTR name);
 struct Node *lib_RemHead(SysBase *SysBase, struct List *list);
 struct Node *lib_FindName(SysBase *SysBase, struct List *liste, STRPTR name);
-void lib_Enable(struct SysBase *SysBase);
-void lib_Disable(struct SysBase *SysBase);
+void lib_Enable(struct SysBase *SysBase, UINT32 ipl);
+UINT32 lib_Disable(struct SysBase *SysBase);
 void lib_Permit(struct SysBase *SysBase);
 void lib_Forbid(struct SysBase *SysBase);
 Task *lib_AddTask(SysBase *SysBase, Task *task, APTR code_start, APTR finalPC, APTR data);
@@ -115,3 +115,5 @@ struct Interrupt *lib_CreateIntServer(SysBase *SysBase, const STRPTR name, INT8 
 
 void lib_AddExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr);
 struct Interrupt *lib_RemExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr);
+
+Task *lib_TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);

@@ -13,14 +13,13 @@ struct TimerBase *timer_OpenDev(struct TimerBase *TimerBase, struct IORequest *i
     {
 	case UNIT_VBLANK:
 	case UNIT_MICROHZ:
+	case UNIT_ECLOCK:
 	case UNIT_WAITUNTIL:
+	case UNIT_WAITECLOCK:
 	    ioreq->io_Error = 0;
 	    ioreq->io_Unit = (struct Unit *)unitNum;
 	    ioreq->io_Device = (struct Device *)TimerBase;
 	    break;
-
-	case UNIT_ECLOCK:
-	case UNIT_WAITECLOCK:	
 	default:
 	    ioreq->io_Error = IOERR_OPENFAIL;
     }

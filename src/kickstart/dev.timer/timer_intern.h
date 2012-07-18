@@ -20,10 +20,10 @@
 #define SysBase TimerBase->Timer_SysBase
 
 #define VERSION  0
-#define REVISION 1
+#define REVISION 2
 
 #define DEVNAME "timer"
-#define DEVVER  " 0.1 __DATE__"
+#define DEVVER  " 0.2 __DATE__"
 #define UNIT_MAX		5
 
 struct EClockVal
@@ -54,7 +54,8 @@ typedef struct TimerBase
 	struct TimeVal		Elapsed;
 	
 	UINT32				TimerIRQ;
-	struct Interrupt	*TimerIntServer;
+	struct Interrupt	*Timer1IntServer;
+	struct Interrupt	*Timer3IntServer;
 	struct TimeVal		TimerIntTime;
 	
 	struct MinList		Lists[UNIT_MAX];

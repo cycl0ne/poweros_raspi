@@ -19,13 +19,14 @@ BOOL interrupts_disabled(void);
 
 Task *lib_FindTask(SysBase *SysBase, STRPTR name)
 {
+	UINT32 ipl;
   if (name == NULL) return SysBase->thisTask;
   Task *task=NULL;
 
-  Disable();
+  ipl = Disable();
   task = (Task *)FindName((List*)&SysBase->TaskReady, name);
   if (task == NULL) task = (Task *)FindName((List*)&SysBase->TaskWait, name);
-  Enable();
+  Enable(ipl);
   return task;
 }
 
@@ -44,57 +45,51 @@ static void TaskRun(void)
 	for(;;); //Not reached
 }
 
-
-Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri)
+Task *lib_TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri)
 {
 	Task *newTask = AllocVec(sizeof(Task), MEMF_FAST|MEMF_CLEAR);
 	if (newTask==NULL) return NULL;
-//	UINT32 mask = ~(7);
-//	void *mem = AllocVec(stackSize * sizeof(UINT32) + 7, MEMF_FAST|MEMF_CLEAR);
-//	void *ptr = (void *)(((UINT32)mem+7)&mask);
-//	newTask->Stack_Bottom = ptr;
-//	newTask->Stack_Buffer = mem;
-	newTask->Stack = AllocVec(stackSize, MEMF_FAST|MEMF_CLEAR);
 
+	newTask->Stack = AllocVec(stackSize, MEMF_FAST|MEMF_CLEAR);
 	if (newTask->Stack == NULL) 
 	{
 		FreeVec(newTask);
 		return NULL;
 	}
-	
 	newTask->StackSize = stackSize;
+
+	if (name == NULL) 	newTask->Node.ln_Name = "UnknownTask";
+	else newTask->Node.ln_Name = name;
+	newTask->Node.ln_Pri = pri;
+	return AddTask(newTask, codeStart, NULL, data);
+}
+
+Task *lib_AddTask(SysBase *SysBase, Task *newTask, APTR codeStart, APTR finalPC, APTR data) 
+{
+	if (newTask == NULL) return NULL;
 	#ifdef DEBUGTASKS
 	DPrintF("[TaskCreate] Name: %s\n", name);
 	DPrintF("[TaskCreate] stackSize: %x\n", stackSize);	
 	DPrintF("[TaskCreate] Stack: %x\n", newTask->Stack);
 	#endif
 	
-	newTask->Node.ln_Type = NT_TASK;
-	if (name == NULL) 	newTask->Node.ln_Name = "UnknownTask";
-	else newTask->Node.ln_Name = name;
-	newTask->Node.ln_Pri = pri;
+	newTask->Node.ln_Type = NT_TASK; //Perhaps PowerDOS wants to add this?!
+	if (newTask->Node.ln_Name == NULL) 	newTask->Node.ln_Name = "UnknownTask";
 	newTask->State = READY;
 	newTask->CPU_Usage = 0;
 	newTask->TDNestCnt = -1; // TaskSched allowed
+	newTask->IDNestCnt = -1; // Ints allowed
 	newTask->TaskArg = data;
 	newTask->TaskFunc = codeStart;
 	
 	context_save(&newTask->SavedContext);
 	context_set(&newTask->SavedContext, FADDR(TaskRun), (UINTPTR) newTask->Stack, newTask->StackSize);
 	UINT32 ipl = interrupts_disable();
-	newTask->SavedContext.ipl = interrupts_read();
-	interrupts_restore(ipl);
-	
+	newTask->SavedContext.ipl = interrupts_read();	
 	Enqueue(&SysBase->TaskReady,&newTask->Node);
-	return newTask;
-}
+	interrupts_restore(ipl);
 
-Task *lib_AddTask(SysBase *SysBase, Task *task, APTR code_start, APTR finalPC, APTR data) 
-{
-	/* Obsolete */
-	lib_Print_uart0("[AddTask]\n");
-	if (task == NULL) return NULL;
-	return task;
+	return newTask;
 }
 
 INT8 lib_AllocSignal(SysBase *SysBase, INT32 signalNum)
@@ -165,10 +160,8 @@ INT8 lib_SetTaskPri(SysBase *SysBase, struct Task *task, INT16 pri)
 	Permit();
 //	lib_Print_uart0("[Change Pri] Schedule\n");
 
-	Schedule();
+	if ((SysBase->TDNestCnt < 0) && (!(IsListEmpty(&SysBase->TaskReady)))) Schedule();
 	return old;
 }
-
-
 
 

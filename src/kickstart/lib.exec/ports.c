@@ -40,7 +40,7 @@ struct MsgPort *lib_CreateMsgPort(SysBase *SysBase)
 	struct MsgPort *ret=NULL;
 
    	ret = (struct MsgPort *)AllocVec(sizeof(struct MsgPort), MEMF_FAST|MEMF_CLEAR); //MEMF_PUBLIC|MEMF_CLEAR);
-   	if (ret!=NULL)
+   	if (NULL != ret)
    	{
      	INT8 sb;
      	sb = AllocSignal(-1);

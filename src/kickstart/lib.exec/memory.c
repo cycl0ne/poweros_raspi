@@ -40,9 +40,9 @@ void lib_AddMemList(SysBase *SysBase, UINT32 size, UINT32 attribute, INT32 pri, 
   lib_hexstrings((UINT32)mem->mh_Upper );
   lib_hexstrings((UINT32)mem->mh_Lower );
 
-  Disable();
-  Enqueue(&SysBase->MemList, &mem->mh_Node);
-  Enable();
+	UINT32 ipl = Disable();
+	Enqueue(&SysBase->MemList, &mem->mh_Node);
+	Enable(ipl);
 }
 
 APTR lib_Allocate(SysBase *SysBase, struct MemHeader *mh, UINT32 nbytes)

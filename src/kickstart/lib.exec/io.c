@@ -9,7 +9,6 @@
 
 void lib_AbortIO(SysBase *SysBase, struct IORequest *iORequest)
 {
-	// Error Code is not RETURNED !!! :(
 	(((void(*)(struct Device *, struct IORequest *)) _GETVECADDR(iORequest->io_Device,6))(iORequest->io_Device, iORequest));
 }
 
@@ -46,13 +45,15 @@ struct IORequest *lib_CheckIO(SysBase *SysBase,struct IORequest *iORequest)
 
 INT32 lib_DoIO(SysBase *SysBase, struct IORequest *iORequest)
 {
+	if (iORequest == NULL) return -1;
+	if (iORequest->io_Device == NULL) return -1;
 	iORequest->io_Flags=IOF_QUICK;
 	iORequest->io_Message.mn_Node.ln_Type = 0;
 
 	//DPrintF("DoIO: %x\n",iORequest->io_Device[-5]); //->dd_Library.lib_Node.ln_Name
 	(((void(*)(struct Device *, struct IORequest *)) _GETVECADDR(iORequest->io_Device,5))(iORequest->io_Device, iORequest));
 	//DPrintF("WaitIO: %s\n",iORequest->io_Device->dd_Library.lib_Node.ln_Name); 
-	 if(!(iORequest->io_Flags&IOF_QUICK)) WaitIO(iORequest);
+	 if(!(iORequest->io_Flags & IOF_QUICK)) WaitIO(iORequest);
 	//DPrintF("WaitIO: %s return\n",iORequest->io_Device->dd_Library.lib_Node.ln_Name); 
 	return (INT32)iORequest->io_Error;
 }
@@ -66,8 +67,7 @@ void lib_SendIO(SysBase *SysBase, struct IORequest *iORequest)
 
 INT32 lib_WaitIO(SysBase *SysBase, struct IORequest *iORequest)
 {
-	// We have to wait now for our ASYNCHRONOUS Task to complete...
-	while(iORequest->io_Message.mn_Node.ln_Type == NT_MESSAGE)
+    while(!(iORequest->io_Flags&IOF_QUICK) && iORequest->io_Message.mn_Node.ln_Type == NT_MESSAGE)
 	{
 		//DPrintF("W");
 		Wait(1<<iORequest->io_Message.mn_ReplyPort->mp_SigBit);
@@ -76,9 +76,9 @@ INT32 lib_WaitIO(SysBase *SysBase, struct IORequest *iORequest)
 
 	if(iORequest->io_Message.mn_Node.ln_Type == NT_REPLYMSG)
 	{
-		Disable();
+		UINT32 ipl = Disable();
 		Remove(&iORequest->io_Message.mn_Node);
-		Enable();
+		Enable(ipl);
 	}
 	return (INT32)iORequest->io_Error;
 }

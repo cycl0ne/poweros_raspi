@@ -30,7 +30,9 @@ __attribute__((no_instrument_function))  UINT32 IRQ_Tick(unsigned int exc_no, is
 	UINT32 stc = READ32(ST_BASE + 0x04);
 	WRITE32(ST_BASE + 0x18, stc + STC_FREQ_HZ/100);//20); // We are running here with 1microsecond per inc. 50 taskswitch per second
 
-	Schedule();
+	if ((SysBase->TDNestCnt < 0) && (!(IsListEmpty(&SysBase->TaskReady)))) Schedule();
+	//SysBase->Quantum++;
+	//	if (SysBase->Quantum%100 == 0) Schedule();
 	return 1;
 }
 
@@ -39,7 +41,7 @@ void Platform_InitTimer()
 	lib_Print_uart0("[INIT] Timer Activation\n");
 	SysBase *SysBase = g_SysBase;
 	struct Interrupt *irq;
-	
+	SysBase->Quantum = 0;
 	irq = CreateIntServer("Tick (exec.library)", -10, IRQ_Tick, NULL);
 	AddIntServer(IRQ_TIMER3, irq);
 	

@@ -95,7 +95,8 @@ APTR FuncTab[] =
 	(void(*)) lib_RemExcServer,
 
 	(void(*)) lib_DPrintF,
-		
+	(void(*)) lib_TaskCreate,
+	
 	(APTR) ((INT32)-1)
 };
 
@@ -110,16 +111,34 @@ void _InitExcServer(SysBase *SysBase);
 #else
 	#define DEBUG(fmt, args...) do {} while(0)
 #endif
+#include "raspi_platform.h"
+#define NOP { __asm__ __volatile__ ("\tnop\n"); }
 
 static void lib_Idle(APTR SysBase) 
 {
 	//SysBase *SysBase = g_SysBase;
 	DPrintF("[IDLE] Started\n");
 	SetTaskPri(NULL, -125);
-	for(;;);
+
+	DPrintF("[IDLE] SetTaskpri -125\n");
+	
+	UINT32 sel = READ32(GPFSEL1);
+	sel &= ~(0b111 << 18);
+	sel |= (0b001 << 18);
+	WRITE32(GPFSEL1,sel);
+
+	DPrintF("[IDLE] GPIO\n");
+
+	while(1)
+	{
+		WRITE32(GPCLR0, 1<<16);
+		for (int i = 0; i < 0x100000; i++) NOP;
+		WRITE32(GPSET0, 1<<16);
+		for (int i = 0; i < 0x100000; i++) NOP;
+	}
+	DPrintF("[IDLE] PONR\n");
 }
 
-Task *TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);
 void lib_ExecTask(struct SysBase *SysBase);
 
 SysBase *CreateSysBase(struct MemHeader *memStart)
@@ -196,9 +215,9 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
    	Enqueue(&SysBase->LibList, &SysBase->LibNode.lib_Node);
 	DEBUG("Done, return SysBase: %x\n", SysBase);
 
-	DPrintF("[INIT] Create Idle Task\n");
-	Task *task1 = TaskCreate(SysBase, "idle", lib_Idle, SysBase, _IDLE_TASK_STACK_, 128); 
-	Task *task2 = TaskCreate(SysBase, "ExecTask", lib_ExecTask, SysBase, _EXEC_TASK_STACK_, 100);
+	DPrintF("[INIT] Create Idle&Exec Task\n");
+	Task *task1 = TaskCreate("idle", lib_Idle, SysBase, _IDLE_TASK_STACK_, 128); 
+	Task *task2 = TaskCreate("ExecTask", lib_ExecTask, SysBase, _EXEC_TASK_STACK_, 100);
 
 	if (RomTagScanner((APTR)0x8000, (APTR)0x180000) == FALSE)
 	{

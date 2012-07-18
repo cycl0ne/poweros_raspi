@@ -5,8 +5,8 @@
 #include "ports.h"
 #endif
 
-#ifndef devices_h
-#include "devices.h"
+#ifndef device_h
+#include "device.h"
 #endif
 
 struct IORequest {
