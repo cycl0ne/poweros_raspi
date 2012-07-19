@@ -105,7 +105,7 @@ static void IntMakeFunctions(APTR target, APTR functionArray);
 void lib_hexstrings ( unsigned int d );
 void lib_Print_uart0(const char *s);
 void _InitExcServer(SysBase *SysBase);
-#define FUNCTAB_DEBUG
+//#define FUNCTAB_DEBUG
 #ifdef FUNCTAB_DEBUG
 	#define DEBUG(fmt, args...) DPrintF("[%s:%d] " fmt, __PRETTY_FUNCTION__, __LINE__ , ##args)
 #else
@@ -164,11 +164,11 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
 //	lib_hexstrings((UINT32) sizeof(struct SysBase));
 
 	IntMakeFunctions(SysBase, &FuncTab);
-	UINT32 tmp = ((UINT32 *)SysBase)[-1];
-	lib_hexstrings((UINT32) tmp);
-	lib_hexstrings((UINT32) ((UINT32 *)SysBase)[-2]);
-	lib_hexstrings((UINT32) lib_OpenLib);
-	lib_hexstrings((UINT32) lib_CloseLib);
+//	UINT32 tmp = ((UINT32 *)SysBase)[-1];
+//	lib_hexstrings((UINT32) tmp);
+//	lib_hexstrings((UINT32) ((UINT32 *)SysBase)[-2]);
+//	lib_hexstrings((UINT32) lib_OpenLib);
+//	lib_hexstrings((UINT32) lib_CloseLib);
 
 	// FROM NOW ON YOU CAN USE JUMPTABLE
 	SysBase->IDNestCnt = 1;
