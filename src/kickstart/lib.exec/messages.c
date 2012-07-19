@@ -151,7 +151,7 @@ UINT32 lib_Wait(SysBase *SysBase, UINT32 signalSet)
 void WakeupTask(SysBase *SysBase, struct Task *Task, UINT32 signal)
 {
 	UINT32 ipl = interrupts_disable();
-	if (Task->State != RUN)
+	if (Task->State == WAIT)
 	{
 		// Remove him from the Waitqueue
 		Remove(&Task->Node);
