@@ -6,6 +6,7 @@
 #include "io.h"
 #include "resident.h"
 #include "irq.h"
+#include "semaphores.h"
 
 APTR lib_ExpungeLib(struct SysBase *SysBase);
 APTR lib_ExtFuncLib(void);
@@ -117,3 +118,13 @@ void lib_AddExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr)
 struct Interrupt *lib_RemExcServer(SysBase *SysBase, UINT32 intNumber, struct Interrupt *isr);
 
 Task *lib_TaskCreate(SysBase *SysBase, char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);
+
+void lib_InitSemaphore(struct SysBase *SysBase, struct SignalSemaphore *signalSemaphore);
+void lib_AddSemaphore(struct SysBase *SysBase, const char *semName, struct SignalSemaphore *sigSem);
+void lib_RemSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
+struct SignalSemaphore *lib_FindSemaphore(struct SysBase *SysBase, const char *name);
+
+void lib_ObtainSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
+BOOL lib_AttemptSemaphore(struct SysBase *SysBase, struct SignalSemaphore *signalSemaphore);
+void lib_ReleaseSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
+

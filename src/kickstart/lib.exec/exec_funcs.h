@@ -97,6 +97,15 @@ struct Interrupt *RemExcServer(UINT32 intNumber, struct Interrupt *isr);
 
 Task *TaskCreate(const char *name, APTR codeStart, APTR data, UINT32 stackSize, INT8 pri);
 
+void InitSemaphore(struct SignalSemaphore *signalSemaphore);
+void AddSemaphore(const char *semName, struct SignalSemaphore *sigSem);
+void RemSemaphore(struct SignalSemaphore *sigSem);
+struct SignalSemaphore *FindSemaphore(const char *name);
+
+void ObtainSemaphore(struct SignalSemaphore *sigSem);
+BOOL AttemptSemaphore(struct SignalSemaphore *signalSemaphore);
+void ReleaseSemaphore(struct SignalSemaphore *sigSem);
+
 
 #define OpenLib(x)  	(((APTR(*)(APTR,APTR)) _GETVECADDR(SysBase,1))(SysBase,x))
 #define CloseLib(x) 	(((APTR(*)(APTR,APTR)) _GETVECADDR(SysBase,2))(SysBase,x))
@@ -198,4 +207,12 @@ Task *TaskCreate(const char *name, APTR codeStart, APTR data, UINT32 stackSize, 
 
 #define TaskCreate(a,b,c,d,e)		(((Task*(*)(APTR, const char *, APTR , APTR , UINT32, INT8 ))				_GETVECADDR(SysBase, 75))(SysBase, a,b,c,d,e))
 
+#define InitSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 76))(SysBase,x))
+#define AddSemaphore(x,y)			(((void(*)(APTR, const char *, struct SignalSemaphore *))	_GETVECADDR(SysBase, 77))(SysBase,x,y))
+#define RemSemaphore(x)				(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 78))(SysBase,x))
+#define FindSemaphore(x)			(((struct SignalSemaphore *(*)(APTR, const char *))			_GETVECADDR(SysBase, 79))(SysBase,x))
+
+#define ObtainSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 80))(SysBase,x))
+#define AttemptSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 81))(SysBase,x))
+#define ReleaseSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 82))(SysBase,x))
 

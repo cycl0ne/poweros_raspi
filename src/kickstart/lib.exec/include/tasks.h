@@ -41,6 +41,29 @@ typedef void (*Task_Function)(void *data);
 #define TF_SWITCH	(1L<<6)
 #define TF_LAUNCH	(1L<<7)
 
+// Special Signals SYSTEMUSE
+#define SIGB_ABORT	0
+#define SIGB_CHILD	1
+#define SIGB_BLIT	4	/* Note: same as SINGLE */
+#define SIGB_SINGLE	4	/* Note: same as BLIT */
+#define SIGB_SEMAPHORE	4	/* Note: same as both */
+#define SIGB_INTUITION	5
+#define SIGB_NET	7
+#define SIGB_DOS	8
+
+#define SIGF_SYSTEM  SIGF_DOS||SIGF_NET||SIGF_INTUITION||SIGF_SINGLE  //Reserved for Systemuse
+
+#define SIGF_ABORT	(1L<<0)
+#define SIGF_CHILD	(1L<<1)
+
+#define SIGF_BLIT	(1L<<4)
+#define SIGF_SINGLE	(1L<<4)
+#define SIGF_SEMAPHORE	(1L<<4)
+
+#define SIGF_INTUITION	(1L<<5)
+#define SIGF_NET	(1L<<7)
+#define SIGF_DOS	(1L<<8)
+
 typedef struct Task 
 {
 	Node				Node;

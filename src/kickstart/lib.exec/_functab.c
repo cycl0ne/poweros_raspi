@@ -96,6 +96,14 @@ APTR FuncTab[] =
 
 	(void(*)) lib_DPrintF,
 	(void(*)) lib_TaskCreate,
+
+	(void(*)) lib_InitSemaphore,
+	(void(*)) lib_AddSemaphore,
+	(void(*)) lib_RemSemaphore,
+	(void(*)) lib_FindSemaphore,
+	(void(*)) lib_ObtainSemaphore,
+	(void(*)) lib_AttemptSemaphore,
+	(void(*)) lib_ReleaseSemaphore,
 	
 	(APTR) ((INT32)-1)
 };
