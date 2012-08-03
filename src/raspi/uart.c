@@ -80,6 +80,7 @@ unsigned int lib_UART_recv ( void )
     }
     return(READ32(AUX_MU_IO_REG)&0xFF);
 }
+void lib_DSB(void);
 
 void lib_UART_send ( unsigned int c )
 {
@@ -94,6 +95,7 @@ void lib_UART_send ( unsigned int c )
 	{	
 		while(1) {if(READ32(AUX_MU_LSR_REG)&0x20) break;}
 		WRITE32(AUX_MU_IO_REG,c);
+		lib_DSB();
 	}
 }
 

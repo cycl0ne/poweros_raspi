@@ -54,12 +54,12 @@ void hexdump (APTR SysBase, unsigned char *buf,int len)
 
 	do
 	{
-		DPrintF("%x | ",cnt);
+		DPrintF("%08X | ",cnt);
 		for (cnt3=0;cnt3<16;cnt3++)
 		{
 			if (cnt<len)
 			{
-				DPrintF("%x ",buf[cnt++]);
+				DPrintF("%02X ",buf[cnt++]);
 			}
 			else
 				DPrintF("   ");
@@ -142,29 +142,24 @@ void sys_demo()
 	struct MsgPort *TimerPort = CreateMsgPort();
 	struct TimeRequest *TimerIO = CreateIORequest(TimerPort, sizeof(struct TimeRequest));
 
-	struct MsgPort *SDHCIPort = CreateMsgPort();
-	struct IOExtTD *mmcIO = CreateIORequest(SDHCIPort, sizeof(struct IOExtTD));
+//	struct MsgPort *SDHCIPort = CreateMsgPort();
+//	struct IOExtTD *mmcIO = CreateIORequest(SDHCIPort, sizeof(struct IOExtTD));
 
-	if (TimerPort == NULL) DPrintF("Failed to allocate SDHCIPort\n");
-	if (TimerIO == NULL) DPrintF("Failed to allocate mmcIO\n");
-	if (SDHCIPort == NULL) DPrintF("Failed to allocate SDHCIPort\n");
-	if (mmcIO == NULL) DPrintF("Failed to allocate mmcIO\n");
+	if (TimerPort == NULL) DPrintF("Failed to allocate TIMERPort\n");
+	if (TimerIO == NULL) DPrintF("Failed to allocate TimerIO\n");
+//	if (SDHCIPort == NULL) DPrintF("Failed to allocate SDHCIPort\n");
+//	if (mmcIO == NULL) DPrintF("Failed to allocate mmcIO\n");
 	
 	
-	if (0 != OpenDevice("sdhci.device", 0, (struct IORequest *)mmcIO, 0))
-	{
-		DPrintF("Open failed SDHCI \n");
-		for(;;);
-	}
 #define TD_CHANGENUM    (CMD_NONSTD + 4)
-	mmcIO->iotd_Req.io_Command = CMD_UPDATE;
-	APTR memory = AllocVec(0x8000, MEMF_FAST|MEMF_CLEAR);
+//	mmcIO->iotd_Req.io_Command = CMD_READ;
+//	APTR memory = AllocVec(0x8000, MEMF_FAST|MEMF_CLEAR);
 
-	if (memory == NULL) DPrintF("Failed to allocate memory\n");
+//	if (memory == NULL) DPrintF("Failed to allocate memory\n");
 	
-	mmcIO->iotd_Req.io_Data = memory;
-	mmcIO->iotd_Req.io_Length = 64;
-	mmcIO->iotd_Req.io_Offset = 0;
+//	mmcIO->iotd_Req.io_Data = memory;
+//	mmcIO->iotd_Req.io_Length = 4;
+//	mmcIO->iotd_Req.io_Offset = 0;
 
 	//DoIO((struct IORequest *)mmcIO);	
 	
@@ -173,18 +168,18 @@ void sys_demo()
 	sel |= (0b001 << 18);
 	WRITE32(GPFSEL1,sel);
 
-	if (0 != OpenDevice("sdhci.device", 0, (struct IORequest *)mmcIO, 0))
-	{
-		DPrintF("Open failed SDHCI \n");
-		for(;;);
-	}
+//	if (0 != OpenDevice("sdhci.device", 0, (struct IORequest *)mmcIO, 0))
+//	{
+//		DPrintF("Open failed SDHCI \n");
+//		for(;;);
+//	}
 	if (0 != OpenDevice("timer.device", UNIT_VBLANK, (struct IORequest *)TimerIO, 0))
 	{
 		DPrintF("Open failed \n");
 		for(;;);
 	}
 
-	DPrintF("Timer opened\n");
+//	DPrintF("Timer opened\n");
 	
 	//	Forbid();
 	//	Disable();
@@ -193,7 +188,8 @@ void sys_demo()
 //	USB_ShowTree();
 //	USB_Inf();
 //	Enable();
-	//hexdump(SysBase, memory, 0x200);
+//	DoIO((struct IORequest *)mmcIO);
+//	hexdump(SysBase, memory, 0x200);
 
 
 	while(1) 
@@ -220,38 +216,11 @@ void sys_demo()
 }
 
 
-struct MemHeader * INTERN_AddMemList(UINT32 size, UINT32 attribute, INT32 pri, APTR base, STRPTR name)
-{
-	struct MemHeader *mem;
-
-	mem = (struct MemHeader *)base;
-	mem->mh_Node.ln_Pri  = pri;
-	mem->mh_Node.ln_Name = name;
-	mem->mh_Node.ln_Type = NT_MEMORY;
-	mem->mh_Attr = attribute;  
-	mem->mh_First = NULL;
-
-	mem->mh_Start = (struct MemChunk *)((UINT8 *)mem+(sizeof(struct MemHeader)));
-	mem->mh_First = mem->mh_Start+1;
-	mem->mh_Start->mc_Bytes = 0;
-	mem->mh_Start->mc_Next = mem->mh_First;
-	mem->mh_First->mc_Next = mem->mh_Start;
-	mem->mh_First->mc_Bytes = ((((UINT8 *)base+size)) - ((UINT8*)base) -sizeof(MemChunk))/sizeof(MemChunk);
-	/*  
-	mem->mh_First = (struct MemChunk *)((UINT8 *)mem+(sizeof(struct MemHeader)));
-	mem->mh_First->mc_Next = NULL;
-	mem->mh_First->mc_Bytes = size-(sizeof(struct MemHeader));
-	*/
-	mem->mh_Lower = mem->mh_First;
-	mem->mh_Upper = (APTR)((UINT8 *) base+size);
-	mem->mh_Free  = mem->mh_First->mc_Bytes;//size-(sizeof(struct MemHeader));
-	return mem;
-}
 
 void install_exception_handlers(void);
 void exception_init(void);
 void install_exception_handlers(void);
-SysBase *CreateSysBase(struct MemHeader *memStart);
+SysBase *CreateSysBase();
 
 #include "atag.h"
 
@@ -328,34 +297,30 @@ void ATAG_Scanner(SysBase *SysBase)
 }
 
 void ExecInit(void) {
-	lib_ROMWackInit();
+//	lib_ROMWackInit();
 	exception_init();
 
-	lib_Print_uart0("PowerOS ARM (Raspberry Pi Port)\n");
-	int i=-1;
+//	lib_Print_uart0("PowerOS ARM (Raspberry Pi Port)\n");
+//	int i=-1;
 	debug_schedule = 0;
-	lib_Print_uart0("[INIT] Adding Memory\n");
-	struct MemHeader *mh = INTERN_AddMemList(0x4000000, MEMF_FAST, 0, (APTR)0x100000, "RASPI_Memory");
+//	lib_Print_uart0("[INIT] Adding Memory\n");
 	//AddMemList(0x4000000, MEMF_FAST, 0, (APTR)0x100000, "RASPI_Memory");
 
-	lib_Print_uart0("[INIT] SysBase Preperation\n");
-	g_SysBase = CreateSysBase(mh);
+//	lib_Print_uart0("[INIT] SysBase Preperation\n");
+	g_SysBase = CreateSysBase();
 	SysBase *SysBase = g_SysBase;
 	
-	DPrintF("[INIT] ATAG Scanner\n");
-	ATAG_Scanner(g_SysBase);
+//	DPrintF("[INIT] ATAG Scanner\n");
+//	ATAG_Scanner(g_SysBase);
 	
 	Platform_InitTimer();
 
-	DPrintF("[INIT] Activating SysBase Permit/Enable -> Leaving SingleTask\n");
-	
-	SysBase->TDNestCnt = -1;
-	SysBase->IDNestCnt = -1;
 
-//	Task *idle2 = TaskCreate("demo", sys_demo, SysBase, 4096*4 , 0);
-	Task *idle2 = TaskCreate("demo2", sys_demo2, SysBase, 4096*4 , -1);
+	Task *idle2 = TaskCreate("demo", sys_demo, SysBase, 4096*4 , 0);
+//	Task *idle2 = TaskCreate("demo2", sys_demo2, SysBase, 4096*4 , -1);
 //	Task *idle3 = TaskCreate("demo3", sys_demo3, SysBase, 4096*4 , 0);
-
+	DPrintF("[INIT] Activating SysBase Permit/Enable -> Leaving SingleTask\n");
+	Permit();
 	DPrintF("[INIT] Schedule -> leaving Kernel Init\n");
 	Schedule();
 	DPrintF("[INIT] PONR (point of no return\n");
