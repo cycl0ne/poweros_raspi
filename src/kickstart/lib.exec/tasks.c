@@ -73,7 +73,7 @@ Task *lib_AddTask(SysBase *SysBase, Task *newTask, APTR codeStart, APTR finalPC,
 	DPrintF("[TaskCreate] Stack: %x\n", newTask->Stack);
 	#endif
 	
-	newTask->Node.ln_Type = NT_TASK; //Perhaps PowerDOS wants to add this?!
+	//YEAH WANTS IT !!! -> newTask->Node.ln_Type = NT_TASK; //Perhaps PowerDOS wants to add this?!
 	if (newTask->Node.ln_Name == NULL) 	newTask->Node.ln_Name = "UnknownTask";
 	newTask->State = READY;
 	newTask->CPU_Usage = 0;

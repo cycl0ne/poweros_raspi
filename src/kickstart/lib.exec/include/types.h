@@ -92,6 +92,15 @@ struct JumpVec
 #define _GETJUMPVEC(lib,n)  ((struct JumpVec *)(((UINT8 *)lib)-((n)*4)))
 #define _GETVECADDR(lib,n)  (_GET_VEC(_GETJUMPVEC(lib,n)))
 
+#define __GNUC_VA_LIST
+typedef __builtin_va_list __gnuc_va_list;
+typedef __gnuc_va_list va_list;
+
+#define va_start(v,l)	__builtin_va_start(v,l)
+#define va_end(v)	__builtin_va_end(v)
+#define va_arg(v,l)	__builtin_va_arg(v,l)
+
+/*
 typedef char *			va_list;
 
 #define	__va_size(type) \
@@ -106,4 +115,5 @@ typedef char *			va_list;
 #define	va_end(ap)
 
 #define	va_copy(dest, src)	((dest) = (src))
+*/
 #endif

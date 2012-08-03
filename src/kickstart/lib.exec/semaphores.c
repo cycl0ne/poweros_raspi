@@ -45,6 +45,7 @@ void lib_ObtainSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem
 	{
 		sigSem->ss_Owner = me;
 		sigSem->ss_NestCount++;
+		sigSem->ss_Type = SS_TYPE_SIMPLE;
 	} else if( sigSem->ss_Owner == me ) 
 	{
 		sigSem->ss_NestCount++;
@@ -58,6 +59,9 @@ void lib_ObtainSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem
 		Enable(ipl);
 		AddTail((struct List *)&sigSem->ss_WaitQueue, (struct Node *)&sr);
 		Wait(SIGF_SEMAPHORE);
+		sigSem->ss_Owner = me;
+		sigSem->ss_NestCount++;
+		sigSem->ss_Type = SS_TYPE_SIMPLE;
     }
 	/* All Done! */
 	Permit();
@@ -74,6 +78,7 @@ BOOL lib_AttemptSemaphore(struct SysBase *SysBase, struct SignalSemaphore *signa
 	{
 		signalSemaphore->ss_Owner=me;
 		signalSemaphore->ss_NestCount++;
+		signalSemaphore->ss_Type = SS_TYPE_SIMPLE;
 		Permit();
 		return TRUE;
 	}
@@ -100,7 +105,7 @@ void lib_ReleaseSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSe
     {
     	if((sigSem->ss_QueueCount >= 0) && !(IsListEmpty(&sigSem->ss_WaitQueue)))
 	    {
-	        struct SemaphoreRequest *sr;
+			struct SemaphoreRequest *sr;
 
 			sr = (struct SemaphoreRequest *)RemHead((struct List *)&sigSem->ss_WaitQueue);
 			sigSem->ss_NestCount++;
@@ -110,6 +115,7 @@ void lib_ReleaseSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSe
 	    {
 	        sigSem->ss_Owner = NULL;
 	        sigSem->ss_QueueCount = -1;
+			sigSem->ss_Type = 0;
 	    }
     } else if(sigSem->ss_NestCount < 0)
     {
@@ -118,3 +124,63 @@ void lib_ReleaseSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSe
     Permit();
 }
 
+void lib_ObtainSemaphoreShared(struct SysBase *SysBase, struct SignalSemaphore *sigSem)
+{
+	struct Task *me = FindTask(NULL);
+
+	Forbid();
+	//QueueCount >0 = locked
+	sigSem->ss_QueueCount++;
+	if(sigSem->ss_QueueCount == 0)
+	{
+		sigSem->ss_Owner = NULL;
+		sigSem->ss_Type = SS_TYPE_SHARED;
+		sigSem->ss_NestCount++;
+	} else if((sigSem->ss_Owner == me) || (sigSem->ss_Owner == NULL)) 
+	{
+		sigSem->ss_NestCount++;
+	} else
+	{
+		struct SemaphoreRequest sr;
+		UINT32 ipl;
+		sr.sr_Waiter = me;
+		ipl = Disable();
+		me->SigRecvd &= ~SIGF_SEMAPHORE;
+		Enable(ipl);
+		AddTail((struct List *)&sigSem->ss_WaitQueue, (struct Node *)&sr);
+		Wait(SIGF_SEMAPHORE);
+		// We are getting it now.
+		sigSem->ss_Owner = NULL;
+		sigSem->ss_Type = SS_TYPE_SHARED;
+		sigSem->ss_NestCount++;		
+    }
+	/* All Done! */
+	Permit();
+}
+
+BOOL lib_AttemptSemaphoreShared(struct SysBase *SysBase, struct SignalSemaphore *sigSem)
+{
+	struct Task *me;
+	me=(struct Task *)FindTask(NULL);
+
+	Forbid();
+	sigSem->ss_QueueCount++;
+	if (sigSem->ss_QueueCount==0)
+	{
+		sigSem->ss_Owner=NULL;
+		sigSem->ss_NestCount++;
+		sigSem->ss_Type = SS_TYPE_SHARED;
+		Permit();
+		return TRUE;
+	}
+
+	if ((sigSem->ss_Owner==me)||(sigSem->ss_Owner==NULL))
+	{
+		sigSem->ss_NestCount++;
+		Permit();
+		return TRUE;
+	}
+	sigSem->ss_QueueCount--;
+	Permit();
+	return FALSE;
+}

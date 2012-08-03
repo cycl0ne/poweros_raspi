@@ -22,10 +22,8 @@ APTR lib_InitResident(SysBase *SysBase, struct Resident *resident, APTR segList)
 	
 	if(resident->rt_MatchWord != RTC_MATCHWORD || resident->rt_MatchTag != resident) return NULL;
 	/* Depending on the autoinit flag... */
-	if(resident->rt_Flags & RTF_AUTOINIT)
+	if(resident->rt_Flags)
 	{
-	/* ...initialize automatically... */
-
     	library = MakeLibrary(init->vectors, init->structure, NULL, init->dSize,(UINT32) segList);
 
 	    if(library != NULL)

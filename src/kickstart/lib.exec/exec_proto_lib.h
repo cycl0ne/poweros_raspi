@@ -125,6 +125,16 @@ void lib_RemSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
 struct SignalSemaphore *lib_FindSemaphore(struct SysBase *SysBase, const char *name);
 
 void lib_ObtainSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
-BOOL lib_AttemptSemaphore(struct SysBase *SysBase, struct SignalSemaphore *signalSemaphore);
+BOOL lib_AttemptSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
 void lib_ReleaseSemaphore(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
 
+void lib_ObtainSemaphoreShared(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
+BOOL lib_AttemptSemaphoreShared(struct SysBase *SysBase, struct SignalSemaphore *sigSem);
+void lib_InitResidentCode(struct SysBase * SysBase, UINT32 startClass);
+APTR lib_SetFunction(struct SysBase *SysBase, struct Library *library, INT32 funcOffset, APTR newFunction);
+va_list lib_RawDoFmt(struct SysBase *SysBase, const char *fmt, va_list ap, void (*PutCh)(INT32, APTR), APTR PutChData);
+
+INT32 lib_RawMayGetChar(struct SysBase *SysBase);
+void lib_RawPutChar(struct SysBase *SysBase, UINT8 chr);
+void lib_RawIOInit(struct SysBase *SysBase);
+void *lib_CopyMemQuick(SysBase *SysBase, const APTR src, APTR dest, int n);

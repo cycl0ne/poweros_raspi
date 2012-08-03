@@ -3,6 +3,8 @@
 
 #include "types.h"
 #include "list.h"
+#include "ports.h"
+#include "tasks.h"
 
 struct SemaphoreMessage
 {
@@ -22,9 +24,9 @@ typedef struct SignalSemaphore
 	struct	Task	*ss_Owner;
 	UINT32			ss_NestCount;
 	UINT32			ss_QueueCount;
+	UINT32			ss_Type;
 	struct	MinList	ss_WaitQueue;
 	struct	SemaphoreRequest	ss_MultipleLink;
-	UINT32					ss_Type;
 } SignalSemaphore;
 
 #define SS_TYPE_SIMPLE	1

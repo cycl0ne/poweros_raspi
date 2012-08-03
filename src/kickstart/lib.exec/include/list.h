@@ -31,6 +31,8 @@
 #define NT_CLIPLIST  18
 #define NT_FONT      19
 #define NT_GRAPHICS  20
+#define NT_VARS		 21
+#define NT_SEGMENT	 22
 
 
 struct Node

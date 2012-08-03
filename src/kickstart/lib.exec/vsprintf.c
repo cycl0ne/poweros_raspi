@@ -122,7 +122,7 @@ static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
 	return(__res);
 }
 
-UINT32 strlen(const char * s)
+static UINT32 strlen(const char * s)
 {
 	const char *sc;
 	for (sc = s; *sc != '\0'; ++sc)/* nothing */;

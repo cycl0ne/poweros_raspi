@@ -104,6 +104,15 @@ APTR FuncTab[] =
 	(void(*)) lib_ObtainSemaphore,
 	(void(*)) lib_AttemptSemaphore,
 	(void(*)) lib_ReleaseSemaphore,
+	(void(*)) lib_ObtainSemaphoreShared,
+	(void(*)) lib_AttemptSemaphoreShared,
+	(void(*)) lib_InitResidentCode,
+	(void(*)) lib_SetFunction,
+	(void(*)) lib_RawDoFmt,
+	(void(*)) lib_RawIOInit,
+	(void(*)) lib_RawPutChar,
+	(void(*)) lib_RawMayGetChar,
+	(void(*)) lib_CopyMemQuick,
 	
 	(APTR) ((INT32)-1)
 };
@@ -148,16 +157,31 @@ static void lib_Idle(APTR SysBase)
 }
 
 void lib_ExecTask(struct SysBase *SysBase);
+struct MemHeader * INTERN_AddMemList(UINT32 size, UINT32 attribute, INT32 pri, APTR base, STRPTR name);
+void intern_ATAGMEM(UINT32 *memSize, UINT32 *memStart);
+/*
+OK_HARDWARE	EQU $0444 ; grey  -First software action
+OK_SOFTWARE	EQU $0888 ; grey  -After CHIP RAM tests
+OK_RESLIST	EQU $0AAA ; grey  -After all resident modules are found
+OK_RESSTART	EQU $0CCC ; grey  -Just before resident chain is started
+OK_DEBUG	EQU $000F ; blue  - debugging
+*/
 
-SysBase *CreateSysBase(struct MemHeader *memStart)
+SysBase *CreateSysBase()
 {
+	lib_RawIOInit(NULL); // this is allowed, RawIOInit uses nothing from SysBase.
+	UINT32 memorySize, memoryStart;
+	intern_ATAGMEM(&memorySize, &memoryStart);
+	memoryStart += 0x100000; // Our Memory starts at 1Mb
+	memorySize -= 0x100000; // we have 1Mb less
+	
+	// Use a constant Memory at the moment.
+	//struct MemHeader *memStart = INTERN_AddMemList(memorySize, MEMF_FAST, 0, (APTR)memoryStart, "RASPI_Memory");
+	struct MemHeader *memStart = INTERN_AddMemList(0x4000000, MEMF_FAST, 0x100000, (APTR)memoryStart, "RASPI_Memory");
+
 	struct SysBase *SysBase;
-//	lib_Print_uart0("CountFunc:");
 	UINT32 negsize = intern_CountFunc(&FuncTab);
-//	lib_hexstrings((UINT32) negsize);
-//	lib_Print_uart0("Allocate:\n");
 	SysBase = lib_Allocate(NULL, memStart, negsize+sizeof(struct SysBase));
-//	lib_hexstrings((UINT32) SysBase);
 
 	if (SysBase == NULL) 
 	{
@@ -166,10 +190,6 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
 	}
 	// Create the Data field below Jumptable
 	SysBase = (struct SysBase *)((UINT32)SysBase + negsize);
-
-//	lib_Print_uart0("SysBase:");
-//	lib_hexstrings((UINT32) SysBase);
-//	lib_hexstrings((UINT32) sizeof(struct SysBase));
 
 	IntMakeFunctions(SysBase, &FuncTab);
 //	UINT32 tmp = ((UINT32 *)SysBase)[-1];
@@ -204,14 +224,22 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
    	SysBase->LibNode.lib_Version      = 0;
    	SysBase->LibNode.lib_Revision     = 1;
    	SysBase->LibNode.lib_Node.ln_Name = "exec.library";
-   	SysBase->LibNode.lib_IDString     = "\0$VER: exec.library 0.1 (__DATE__)\r\n";
+   	SysBase->LibNode.lib_IDString     = "\0$VER: exec.library 0.1 ("__DATE__")\r\n";
    	SysBase->LibNode.lib_PosSize      = sizeof(struct SysBase);
    	SysBase->LibNode.lib_NegSize      = negsize;
    	SysBase->LibNode.lib_OpenCnt      = 1;
+	
+	SysBase->TDNestCnt = 0;
+	SysBase->IDNestCnt = -1;
+
+//	DPrintF("--------------------------------------------------------------\n");
+	DPrintF("PowerOS ARM (Raspberry Pi Port) (%s)", &SysBase->LibNode.lib_IDString[7]);
+//	DPrintF("--------------------------------------------------------------\n");
+//	DPrintF("Memory from %x to %x\n", memoryStart, memorySize);
 
 	// And now you can use SysBase Values!
 
-	DEBUG("AlocCPU Stack\n");
+	DEBUG("AllocCPU Stack\n");
 	
 	SysBase->CPU_Stack = AllocVec(_CPUSTACK_,MEMF_FAST|MEMF_CLEAR);
 
@@ -224,7 +252,7 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
 	DEBUG("Done, return SysBase: %x\n", SysBase);
 
 	DPrintF("[INIT] Create Idle&Exec Task\n");
-	Task *task1 = TaskCreate("idle", lib_Idle, SysBase, _IDLE_TASK_STACK_, 128); 
+	Task *task1 = TaskCreate("idle", lib_Idle, SysBase, _IDLE_TASK_STACK_, -128); 
 	Task *task2 = TaskCreate("ExecTask", lib_ExecTask, SysBase, _EXEC_TASK_STACK_, 100);
 
 	if (RomTagScanner((APTR)0x8000, (APTR)0x180000) == FALSE)
@@ -232,22 +260,8 @@ SysBase *CreateSysBase(struct MemHeader *memStart)
 		DPrintF("[INIT] ROMTAG Scanner Failed\n");
 		for(;;);
 	}
+	InitResidentCode(RTF_SINGLETASK);
 
-	struct ResidentNode *res;
-	DPrintF("[INIT] RTF_SINGLETASK\n");
-    ForeachNode(&SysBase->ResidentList, res)
-    {
-        if (res->rn_Resident->rt_Flags & RTF_SINGLETASK) 
-        {
-            DPrintF("(SINGLETASK)InitResident %s (%x)\n", res->rn_Resident->rt_Name,res->rn_Resident);    
-            if (InitResident(res->rn_Resident, NULL)== NULL) 
-            {
-				DPrintF("[INIT] ROMTAG Scanner Failed (SingleTask)\n");
-				DPrintF("on Resident [%x] name: %s\n", res->rn_Resident, res->rn_Resident->rt_Name);
-				for(;;);
-            }
-        }
-    }
 	return SysBase;
 }
 
@@ -280,3 +294,51 @@ static UINT32 intern_CountFunc(APTR functionArray)
 	return n*4;
 }
 
+struct MemHeader * INTERN_AddMemList(UINT32 size, UINT32 attribute, INT32 pri, APTR base, STRPTR name)
+{
+	struct MemHeader *mem;
+
+	mem = (struct MemHeader *)base;
+	mem->mh_Node.ln_Pri  = pri;
+	mem->mh_Node.ln_Name = name;
+	mem->mh_Node.ln_Type = NT_MEMORY;
+	mem->mh_Attr = attribute;  
+	mem->mh_First = NULL;
+
+	mem->mh_Start = (struct MemChunk *)((UINT8 *)mem+(sizeof(struct MemHeader)));
+	mem->mh_First = mem->mh_Start+1;
+	mem->mh_Start->mc_Bytes = 0;
+	mem->mh_Start->mc_Next = mem->mh_First;
+	mem->mh_First->mc_Next = mem->mh_Start;
+	mem->mh_First->mc_Bytes = ((((UINT8 *)base+size)) - ((UINT8*)base) -sizeof(MemChunk))/sizeof(MemChunk);
+	/*  
+	mem->mh_First = (struct MemChunk *)((UINT8 *)mem+(sizeof(struct MemHeader)));
+	mem->mh_First->mc_Next = NULL;
+	mem->mh_First->mc_Bytes = size-(sizeof(struct MemHeader));
+	*/
+	mem->mh_Lower = mem->mh_First;
+	mem->mh_Upper = (APTR)((UINT8 *) base+size);
+	mem->mh_Free  = mem->mh_First->mc_Bytes;//size-(sizeof(struct MemHeader));
+	return mem;
+}
+
+#include "atag.h"
+
+void intern_ATAGMEM(UINT32 *memSize, UINT32 *memStart)
+{
+	UINT32 *atags;
+
+	for (atags = (UINT32 *)0x100; atags < (UINT32 *)0x8000; atags +=1)
+	{
+		switch (atags[1])
+		{
+			case ATAG_MEM:
+				//DPrintF("[ATAG_MEM] size: %x, start: %x\n", atags[2], atags[3]);
+				*memSize = (UINT32)atags[2];
+				*memStart = (UINT32)atags[3];
+				return;
+				//atags += atags[0]-1;
+				break;
+		}
+	}
+}

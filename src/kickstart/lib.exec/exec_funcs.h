@@ -5,7 +5,7 @@
 #include "resident.h"
 #include "irq.h"
 #include "tasks.h"
-
+#include "semaphores.h"
 #define size_t UINT32
 
 
@@ -85,7 +85,7 @@ void VPrintF(const char *fmt, va_list ap);
 int SNPrintF(char *buf, size_t size, const char *fmt, ...);
 
 void *MemSet(void* m, int c, UINT32 n);
-void *CopyMem(void* dest, const void* src, int n);
+void *CopyMem(const void* src, void* dst, int n);
 
 UINT32 SetSignal(UINT32 newSignals, UINT32 signalSet);
 
@@ -105,6 +105,19 @@ struct SignalSemaphore *FindSemaphore(const char *name);
 void ObtainSemaphore(struct SignalSemaphore *sigSem);
 BOOL AttemptSemaphore(struct SignalSemaphore *signalSemaphore);
 void ReleaseSemaphore(struct SignalSemaphore *sigSem);
+
+void ObtainSemaphoreShared(struct SignalSemaphore *sigSem);
+BOOL AttemptSemaphoreShared(struct SignalSemaphore *sigSem);
+void InitResidentCode(UINT32 startClass);
+
+APTR SetFunction(struct Library *library, INT32 funcOffset, APTR newFunction);
+APTR RawDoFmt(const char *fmt, va_list ap, void (*PutCh)(INT32, APTR), APTR PutChData);
+
+INT32 RawMayGetChar();
+void RawPutChar(UINT8 chr);
+void RawIOInit();
+
+void *CopyMemQuick(const APTR src, APTR dest, int n);
 
 
 #define OpenLib(x)  	(((APTR(*)(APTR,APTR)) _GETVECADDR(SysBase,1))(SysBase,x))
@@ -195,7 +208,7 @@ void ReleaseSemaphore(struct SignalSemaphore *sigSem);
 #define MemSet(x, y, z)			(((APTR(*)(APTR, APTR, INT32, UINT32))		_GETVECADDR(SysBase, 66))(SysBase,x, y, z))
 #define CopyMem(x, y, z)		(((APTR(*)(APTR, APTR, APTR, INT32))				_GETVECADDR(SysBase, 67))(SysBase,x, y, z))
 
-#define SetSignal(x,y)		(((void(*)(APTR, UINT32, UINT32))						_GETVECADDR(SysBase, 68))(SysBase,x))
+#define SetSignal(x,y)		(((UINT32(*)(APTR, UINT32, UINT32))						_GETVECADDR(SysBase, 68))(SysBase,x, y))
 
 #define AddIntServer(x,y)		(((void(*)(APTR, UINT32, struct Interrupt *))					_GETVECADDR(SysBase, 69))(SysBase,x, y))
 #define RemIntServer(x,y)		(((struct Interrupt *(*)(APTR, UINT32, struct Interrupt *))		_GETVECADDR(SysBase, 70))(SysBase,x, y))
@@ -212,7 +225,21 @@ void ReleaseSemaphore(struct SignalSemaphore *sigSem);
 #define RemSemaphore(x)				(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 78))(SysBase,x))
 #define FindSemaphore(x)			(((struct SignalSemaphore *(*)(APTR, const char *))			_GETVECADDR(SysBase, 79))(SysBase,x))
 
-#define ObtainSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 80))(SysBase,x))
-#define AttemptSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 81))(SysBase,x))
-#define ReleaseSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))					_GETVECADDR(SysBase, 82))(SysBase,x))
+#define ObtainSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))		_GETVECADDR(SysBase, 80))(SysBase,x))
+#define AttemptSemaphore(x)			(((BOOL(*)(APTR, struct SignalSemaphore *))		_GETVECADDR(SysBase, 81))(SysBase,x))
+#define ReleaseSemaphore(x)			(((void(*)(APTR, struct SignalSemaphore *))		_GETVECADDR(SysBase, 82))(SysBase,x))
+
+#define ObtainSemaphoreShared(x)	(((void(*)(APTR, struct SignalSemaphore *))		_GETVECADDR(SysBase, 83))(SysBase,x))
+#define AttemptSemaphoreShared(x)	(((BOOL(*)(APTR, struct SignalSemaphore *))		_GETVECADDR(SysBase, 84))(SysBase,x))
+
+#define InitResidentCode(x)			(((void(*)(APTR, UINT32))						_GETVECADDR(SysBase, 85))(SysBase,x))
+#define SetFunction(a,b,c)			(((APTR(*)(APTR, struct Library *, INT32, APTR))	_GETVECADDR(SysBase, 86))(SysBase,a,b,c))
+
+#define RawDoFmt(a,b,c,d)			(((va_list(*)(APTR, const char *, va_list, void (*PutCh)(INT32, APTR), APTR))	_GETVECADDR(SysBase, 87))(SysBase,a,b,c,d))
+
+#define RawIOInit()				(((void(*)(APTR))						_GETVECADDR(SysBase, 88))(SysBase))
+#define RawPutChar(x)			(((void(*)(APTR, UINT8))				_GETVECADDR(SysBase, 89))(SysBase,x))
+#define RawMayGetChar()			(((INT32(*)(APTR))						_GETVECADDR(SysBase, 90))(SysBase))
+
+#define CopyMemQuick(x, y, z)		(((APTR(*)(APTR, APTR, APTR, INT32))				_GETVECADDR(SysBase, 91))(SysBase,x, y, z))
 
