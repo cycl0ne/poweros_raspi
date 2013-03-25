@@ -1,6 +1,8 @@
 ---> At the moment the focus is back on the x86 plattform, since im on a big business trip and have no raspberry pi development kit with me (too much to take with me).
 I will merge the x86 back to the raspberry pi, or create a new multiplatform version.
 
+Repo for the x86 platform: https://github.com/cycl0ne/poweros_x86
+
 Summary:
 ========
 
