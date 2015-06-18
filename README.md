@@ -1,7 +1,21 @@
+Repo for the new multiplatform: https://github.com/cycl0ne/poweros_x86
+
+History:
+
+18.06.2015: Update new V0.2 from our working branch
+
+Dos.library
+aux: device
+ext2.handler Read/Write
+first shell
+loading of files from disk
+booting into shell with HD0: mounted
+first ram.handler
+
+------------------------
+
 ---> At the moment the focus is back on the x86 plattform, since im on a big business trip and have no raspberry pi development kit with me (too much to take with me).
 I will merge the x86 back to the raspberry pi, or create a new multiplatform version.
-
-Repo for the x86 platform: https://github.com/cycl0ne/poweros_x86
 
 Summary:
 ========
