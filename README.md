@@ -1,4 +1,7 @@
-Repo for the new multiplatform: https://github.com/cycl0ne/poweros_x86
+Archived now, latest Version here:
+[(https://github.com/cycl0ne/poweros_esp32)]
+
+-------
 
 History:
 
